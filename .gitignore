@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+.DS_Store
+*.log
+.env
+wp-config.php
+dist/
+# Owner-provided Peyda fonts are included in the private theme deliverable.
+# Keep commercial font binaries out of the public source repository.
+theme/takav/assets/fonts/Peyda-*.ttf

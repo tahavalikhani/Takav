@@ -1,0 +1,20 @@
+{
+  "name": "takav-design",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "images": "node tools/optimize-images.cjs",
+    "preview": "wp-playground-cli server --port=8898 --workers=1 --auto-mount=theme/takav --blueprint=tests/blueprint.json",
+    "test": "node tests/storefront.cjs",
+    "format": "prettier --write theme/takav/assets/css/storefront.css theme/takav/assets/js/storefront.js tools/*.cjs tests/*.cjs"
+  },
+  "devDependencies": {
+    "@wp-playground/cli": "3.1.55",
+    "axe-core": "4.13.0",
+    "playwright": "1.62.1",
+    "prettier": "3.9.9",
+    "sharp": "0.35.4"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "steps": [
+    {"step": "activateTheme", "themeFolderName": "takav"},
+    {"step": "setSiteOptions", "options": {"blogname": "تکاو", "blogdescription": "اولین کالکشن تکاو", "blog_public": "0"}}
+  ]
+}
