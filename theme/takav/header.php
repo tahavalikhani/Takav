@@ -1,4 +1,4 @@
-<?php defined('ABSPATH') || exit; ?>
+<?php defined('ABSPATH') || exit; $current_product = takav_current_product_id(); ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -9,16 +9,15 @@
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
-<div class="announcement"><span class="status-dot" aria-hidden="true"></span> اولین کالکشن تکاو <span class="announcement-separator">/</span> شروع یک خط تازه</div>
 <header class="site-header">
     <div class="header-inner wrap">
-        <a class="wordmark" href="<?php echo esc_url(home_url('/')); ?>" aria-label="تکاو، صفحه اصلی"><bdi>TAKAV<span class="brand-dot" aria-hidden="true">•</span></bdi></a>
-        <nav class="main-nav" aria-label="منوی اصلی" id="main-nav">
-            <a href="<?php echo esc_url(home_url('/#collection')); ?>">کالکشن اول</a>
-            <a href="<?php echo esc_url(home_url('/#signature')); ?>">امضای تکاو</a>
-            <a href="<?php echo esc_url(home_url('/#questions')); ?>">راهنمای خرید</a>
+        <nav class="main-nav" aria-label="منوی اصلی">
+            <a href="<?php echo esc_url(home_url('/')); ?>" <?php if (is_front_page() && !$current_product) echo 'aria-current="page"'; ?>>همه</a>
+            <?php foreach (array('hoodie' => 'هودی', 'pants' => 'شلوار') as $nav_product_id => $label) : ?>
+            <a href="<?php echo esc_url(takav_product_url($nav_product_id)); ?>" <?php if ($current_product === $nav_product_id) echo 'aria-current="page"'; ?>><?php echo esc_html($label); ?></a>
+            <?php endforeach; ?>
         </nav>
-        <a class="header-cta" href="<?php echo esc_url(home_url('/#collection')); ?>">کشف کالکشن <?php takav_icon('arrow'); ?></a>
-        <button class="icon-button menu-toggle" hidden aria-controls="main-nav" aria-expanded="false" aria-label="باز کردن منو"><?php takav_icon('menu'); ?></button>
+        <a class="wordmark" href="<?php echo esc_url(home_url('/')); ?>" aria-label="تکاو، صفحه اصلی"><bdi>TAKAV<span aria-hidden="true">.</span></bdi></a>
+        <a class="header-cart" href="<?php echo esc_url(takav_view_url('cart')); ?>">سبد <span data-cart-count>۰</span></a>
     </div>
 </header>

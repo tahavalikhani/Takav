@@ -1,212 +1,128 @@
+// Links navigate normally. Only the inline product gallery needs JavaScript.
 (() => {
   "use strict";
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => [
-    ...root.querySelectorAll(selector),
-  ];
-  const nav = $("#main-nav");
-  const toggle = $(".menu-toggle");
-  const mobile = matchMedia("(max-width: 600px)");
-  document.documentElement.classList.add("js-enhanced");
-
-  function closeMenu() {
-    if (!nav || !toggle) return;
-    nav.hidden = mobile.matches;
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-label", "باز کردن منو");
-  }
-  if (nav && toggle) {
-    toggle.hidden = false;
-    closeMenu();
-    mobile.addEventListener("change", closeMenu);
-    toggle.addEventListener("click", () => {
-      const open = toggle.getAttribute("aria-expanded") !== "true";
-      toggle.setAttribute("aria-expanded", String(open));
-      toggle.setAttribute("aria-label", open ? "بستن منو" : "باز کردن منو");
-      nav.hidden = !open;
-    });
-    nav.addEventListener("click", (event) => {
-      if (event.target.closest("a")) closeMenu();
-    });
-    document.addEventListener("keydown", (event) => {
-      if (
-        event.key === "Escape" &&
-        toggle.getAttribute("aria-expanded") === "true"
-      ) {
-        closeMenu();
-        toggle.focus();
+  document.querySelectorAll(".product-gallery").forEach((gallery) => {
+    const links = [...gallery.querySelectorAll("[data-gallery-image]")];
+    const image = gallery.querySelector(".gallery-main-image");
+    const status = gallery.querySelector(".gallery-status");
+    const count = gallery.querySelector(".gallery-count");
+    const digits = (value) =>
+      String(value)
+        .padStart(2, "0")
+        .replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]);
+    let request = 0;
+    async function select(link) {
+      const currentRequest = ++request;
+      const next = new Image();
+      next.src = link.dataset.galleryImage;
+      try {
+        await next.decode();
+      } catch (_) {
+        if (currentRequest === request)
+          status.textContent = "عکس بارگذاری نشد. دوباره انتخاب کن.";
+        return;
       }
-    });
-  }
-
-  const cards = $$(".product-card");
-  const filters = $(".filters");
-  function filterProducts(value) {
-    cards.forEach((card) => {
-      card.hidden = value !== "all" && card.dataset.product !== value;
-    });
-    $$(".filter").forEach((button) => {
-      const selected = button.dataset.filter === value;
-      button.classList.toggle("is-active", selected);
-      button.setAttribute("aria-pressed", String(selected));
-    });
-    const status = $("#filter-status");
-    if (status)
-      status.textContent =
-        value === "all"
-          ? "هر دو محصول نمایش داده می‌شوند."
-          : value === "hoodie"
-            ? "هودی تکاو نمایش داده می‌شود."
-            : "شلوار تکاو نمایش داده می‌شود.";
-  }
-  if (filters) {
-    filters.hidden = false;
-    filters.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-filter]");
-      if (button) filterProducts(button.dataset.filter);
-    });
-    $$('a[href$="#collection"]').forEach((link) =>
-      link.addEventListener("click", () => filterProducts("all")),
-    );
-  }
-
-  const dialog = $(".product-dialog");
-  const details = $$(".product-detail");
-  const detailSection = $(".product-details");
-  let opener = null;
-  let activeDetail = null;
-  // Enhance the actual in-page product content; no duplicate product markup.
-  if (dialog && typeof dialog.showModal === "function") {
-    if (detailSection) detailSection.hidden = true;
-    details.forEach((detail) => {
-      const close = $(".detail-close", detail);
-      close.hidden = false;
-      close.addEventListener("click", () => dialog.close());
-    });
-    function openProduct(id, source) {
-      const detail = details.find((item) => item.dataset.detail === id);
-      if (!detail) return;
-      if (dialog.open) dialog.close();
-      opener = source;
-      activeDetail = detail;
-      dialog.append(detail);
-      dialog.setAttribute("aria-labelledby", `title-${id}`);
-      dialog.showModal();
-      document.body.classList.add("modal-open");
-      dialog.scrollTop = 0;
-      $(".detail-close", detail).focus({ preventScroll: true });
+      if (currentRequest !== request) return;
+      image.removeAttribute("srcset");
+      image.src = next.src;
+      image.alt = link.dataset.galleryAlt;
+      links.forEach((item) => item.removeAttribute("aria-current"));
+      link.setAttribute("aria-current", "true");
+      count.textContent = `${digits(links.indexOf(link) + 1)} / ${digits(links.length)}`;
+      status.textContent = link.dataset.galleryAlt;
     }
-    $$("[data-open-product]").forEach((link) =>
+    links.forEach((link, index) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
-        openProduct(link.dataset.openProduct, link);
-      }),
-    );
-    dialog.addEventListener("close", () => {
-      document.body.classList.remove("modal-open");
-      if (activeDetail && detailSection) detailSection.append(activeDetail);
-      activeDetail = null;
-      if (opener && document.contains(opener))
-        opener.focus({ preventScroll: true });
-    });
-    dialog.addEventListener("keydown", (event) => {
-      if (event.key !== "Tab") return;
-      const focusable = $$(
-        "a[href], button:not([disabled]), [tabindex='0']",
-        dialog,
-      ).filter((element) => element.getClientRects().length > 0);
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+        select(link);
+      });
+      link.addEventListener("keydown", (event) => {
+        let next;
+        if (event.key === "ArrowLeft") next = (index + 1) % links.length;
+        if (event.key === "ArrowRight")
+          next = (index - 1 + links.length) % links.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = links.length - 1;
+        if (next === undefined) return;
         event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+        links[next].focus();
+        select(links[next]);
+      });
     });
-    dialog.addEventListener("click", (event) => {
-      if (event.target !== dialog) return;
-      const rect = dialog.getBoundingClientRect();
-      if (
-        event.clientX < rect.left ||
-        event.clientX > rect.right ||
-        event.clientY < rect.top ||
-        event.clientY > rect.bottom
-      )
-        dialog.close();
+  });
+})();
+
+// Local, clearly labelled preview cart. It never creates an order.
+(() => {
+  "use strict";
+  const key = "takav-preview-cart-v1";
+  const labels = { hoodie: "هودی تکاو", pants: "شلوار تکاو" };
+  const persian = (number) => String(number).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]);
+  function read() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || "{}");
+      return Object.fromEntries(Object.keys(labels).map((id) => [id, Math.min(9, Math.max(0, Number(saved[id]) || 0))]));
+    } catch (_) { return { hoodie: 0, pants: 0 }; }
+  }
+  function write(cart) {
+    try { localStorage.setItem(key, JSON.stringify(cart)); return true; }
+    catch (_) { return false; }
+  }
+  function updateCount(cart) {
+    document.querySelectorAll("[data-cart-count]").forEach((count) => {
+      count.textContent = persian(cart.hoodie + cart.pants);
     });
-    if (location.hash.startsWith("#detail-"))
-      openProduct(location.hash.replace("#detail-", ""), null);
   }
-
-  $$("[data-gallery-image]").forEach((link) =>
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      const gallery = link.closest(".detail-gallery");
-      const image = $(".detail-photo img", gallery);
-      image.removeAttribute("srcset");
-      image.src = link.dataset.galleryImage;
-      image.alt = link.dataset.galleryAlt;
-      $(".original-photo-link", gallery).href = link.href;
-      $(".gallery-caption", gallery).textContent = link.dataset.galleryAlt;
-      $$("[data-gallery-image]", gallery).forEach((item) =>
-        item.removeAttribute("aria-current"),
-      );
-      link.setAttribute("aria-current", "true");
-    }),
-  );
-
-  // Local favourites only. Never creates a reservation, account, or order.
-  const storageKey = "takav-favourites-v1";
-  let saved = [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    if (Array.isArray(parsed))
-      saved = parsed.filter((id) => id === "hoodie" || id === "pants");
-  } catch (_) {
-    /* Browsers may disable storage; the page still works. */
+  function productUrl(id) {
+    return document.querySelector(`.main-nav a[href*="${id}"]`)?.href || "#";
   }
-  let toastTimer;
-  function notify(message) {
-    const toast = $(".toast");
-    if (!toast) return;
-    clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.hidden = false;
-    toastTimer = setTimeout(() => {
-      toast.hidden = true;
-    }, 4000);
+  const assetScript = document.querySelector('script[src*="/assets/js/storefront"]');
+  const imageUrl = (id) => assetScript ? new URL(`../images/takav-${id}-640.webp`, assetScript.src).href : "";
+  function render(cart) {
+    const container = document.getElementById("cart-items");
+    if (!container) return;
+    container.replaceChildren();
+    const ids = Object.keys(labels).filter((id) => cart[id]);
+    if (!ids.length) {
+      const empty = document.createElement("p"); empty.className = "cart-empty";
+      empty.textContent = "سبد هنوز خالی است."; container.append(empty); return;
+    }
+    ids.forEach((id) => {
+      const row = document.createElement("div"); row.className = "cart-row";
+      const link = document.createElement("a"); link.href = productUrl(id);
+      const image = document.createElement("img"); image.src = imageUrl(id); image.alt = labels[id]; image.width = 110; image.height = 136;
+      link.append(image);
+      const info = document.createElement("div");
+      const title = document.createElement("h2"); title.textContent = labels[id];
+      const color = document.createElement("p"); color.textContent = "مشکی / نارنجی";
+      const actions = document.createElement("div"); actions.className = "cart-actions";
+      const decrement = document.createElement("button"); decrement.type = "button"; decrement.textContent = "−"; decrement.setAttribute("aria-label", `کم کردن ${labels[id]}`);
+      const quantity = document.createElement("span"); quantity.textContent = persian(cart[id]);
+      const increment = document.createElement("button"); increment.type = "button"; increment.textContent = "+"; increment.setAttribute("aria-label", `اضافه کردن ${labels[id]}`);
+      const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "حذف";
+      const change = (number) => { const next = { ...cart, [id]: Math.min(9, Math.max(0, number)) }; if (write(next)) { updateCount(next); render(next); } };
+      decrement.addEventListener("click", () => change(cart[id] - 1));
+      increment.addEventListener("click", () => change(cart[id] + 1));
+      remove.addEventListener("click", () => change(0));
+      actions.append(decrement, quantity, increment); info.append(title, color, actions); row.append(link, info, remove); container.append(row);
+    });
+    const note = document.createElement("p"); note.className = "cart-note"; note.textContent = "این یک سبد نمایشی است؛ قیمت و پرداخت بعداً اضافه می‌شوند."; container.append(note);
   }
-  function updateSave(button) {
-    const selected = saved.includes(button.dataset.save);
-    button.setAttribute("aria-pressed", String(selected));
-    $("span", button).textContent = selected
-      ? button.dataset.labelSaved
-      : button.dataset.labelDefault;
-  }
-  $$("[data-save]").forEach((button) => {
-    button.hidden = false;
-    const note = $(".save-note", button.parentElement);
-    if (note) note.hidden = false;
-    updateSave(button);
+  const cart = read(); updateCount(cart); render(cart);
+  document.querySelectorAll("[data-add-cart]").forEach((button) => {
     button.addEventListener("click", () => {
-      const id = button.dataset.save;
-      const next = saved.includes(id)
-        ? saved.filter((item) => item !== id)
-        : [...saved, id];
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
-        saved = next;
-        updateSave(button);
-        notify(
-          saved.includes(id)
-            ? "در همین مرورگر ذخیره شد."
-            : "از علاقه‌مندی‌ها حذف شد.",
-        );
-      } catch (_) {
-        notify("ذخیره‌سازی در این مرورگر در دسترس نیست.");
-      }
+      const id = button.dataset.addCart;
+      if (!Object.hasOwn(labels, id)) return;
+      const next = read(); next[id] = Math.min(9, next[id] + 1);
+      const feedback = button.parentElement.querySelector(".cart-feedback");
+      if (!write(next)) { feedback.textContent = "مرورگر سبد را ذخیره نکرد."; return; }
+      updateCount(next);
+      feedback.replaceChildren();
+      const message = document.createTextNode("به سبد اضافه شد. ");
+      const link = document.createElement("a");
+      link.href = document.querySelector(".header-cart")?.href || "#";
+      link.textContent = "دیدن سبد ↗";
+      feedback.append(message, link);
     });
   });
 })();

@@ -3,6 +3,7 @@
 defined('ABSPATH') || exit;
 
 require_once get_template_directory() . '/inc/catalog.php';
+require_once get_template_directory() . '/inc/routes.php';
 
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
@@ -58,7 +59,13 @@ add_action('wp_head', function () {
 });
 
 add_filter('document_title_parts', function ($parts) {
-    if (is_front_page()) {
+    $view = get_query_var('takav_view', '');
+    if ($view === 'collection-one') { $parts['title'] = 'کالکشن ۰۱ — تکاو'; return $parts; }
+    if ($view === 'cart') { $parts['title'] = 'سبد نمایشی — تکاو'; return $parts; }
+    $id = takav_current_product_id();
+    if ($id) {
+        $parts['title'] = takav_catalog()[$id]['name'] . ' — کالکشن اول';
+    } elseif (is_front_page()) {
         $parts['title'] = 'تکاو — هودی و شلوار، کالکشن اول';
     }
     return $parts;

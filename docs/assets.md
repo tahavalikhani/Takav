@@ -1,12 +1,12 @@
 # Asset provenance
 
-All shipped clothing photos were supplied by the owner in this task on 24 September 2026. Original JPEGs are preserved without retouching. Responsive WebP derivatives are resized/compressed only, with the same full image bounds. The hero and gallery thumbnails may crop the displayed frame with CSS; full originals are linked in the gallery.
+All shipped clothing photos were supplied by the owner in this task on 24 September 2026. Original JPEGs are preserved without retouching. Responsive WebP derivatives are resized/compressed only, with the same full image bounds. Campaign and gallery thumbnails may crop the displayed frame with CSS; full originals are linked in the gallery.
 
 | Asset stem | Supplied photo time | Use |
 | --- | --- | --- |
 | takav-pants | 21:48:07 | Full trouser photo and gallery |
-| takav-hoodie | 21:48:08 | Full hoodie photo, hero inset, gallery |
-| takav-embroidery | 21:54:06 | Hero chest embroidery close-up and gallery |
+| takav-hoodie | 21:48:08 | Full hoodie photo, campaign and gallery |
+| takav-embroidery | 21:54:06 | Campaign detail and gallery |
 | takav-hood-detail | 21:54:07 | Hood emblem gallery detail |
 | takav-pocket-detail | 21:54:12 | Rear pocket gallery detail |
 | takav-waist-detail | 21:54:25 | Waist and zip pocket gallery detail |
