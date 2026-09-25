@@ -74,9 +74,9 @@ const output =
   for (const url of [base, hoodie, pants, `${base}/collection-one/`, `${base}/cart/`]) {
     await page.goto(url, { waitUntil: "networkidle" });
     assert.equal(await page.locator("html").getAttribute("dir"), "rtl");
-    assert.match(
-      await page.locator("meta[name=robots]").getAttribute("content"),
-      /noindex/,
+    assert.equal(
+      await page.locator("meta[name=robots][content*=noindex]").count(),
+      0,
     );
     assert.equal(await page.locator("h1").count(), 1);
     for (const width of [320, 390, 768, 1440, 1920]) {

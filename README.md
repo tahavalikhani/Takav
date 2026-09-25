@@ -8,11 +8,11 @@ The supplied theme ZIP and local preview include the owner's Peyda files. Font b
 
 ## Install on a WordPress staging site
 
-Download `takav-wordpress-theme.zip` from the root of this repository (do **not** use GitHub's green **Code → Download ZIP** button — that archive wraps the theme in extra folders and WordPress reports a missing `style.css`). Upload it through **نمایش ← پوسته‌ها ← افزودن پوسته تازه ← بارگذاری پوسته**, then activate Takav. Alternatively copy `theme/takav` to `wp-content/themes/takav`.
+Upload the `takav-wordpress-theme.zip` deliverable (do **not** upload GitHub's **Code → Download ZIP** archive — it wraps the theme in extra folders and WordPress reports a missing `style.css`) through **نمایش ← پوسته‌ها ← افزودن پوسته تازه ← بارگذاری پوسته**, then activate Takav. Alternatively copy `theme/takav` to `wp-content/themes/takav`.
 
 The homepage uses `front-page.php` with either WordPress reading setting. No WooCommerce, page builder, account, merchant key or eNamad is needed to review this design. This theme does not disable checkout provided by unrelated installed plugins: use a staging site for review.
 
-The theme deliberately sends `noindex` during this design phase. Remove that filter in `functions.php` only as part of a reviewed launch. The generated static preview is also marked `noindex`.
+The theme lets search engines index the site. Make sure **تنظیمات ← خواندن ← از موتورهای جستجو درخواست کن تا محتوای سایت را بررسی نکنند** is unchecked. The generated static preview is still marked `noindex`.
 
 ## Local development and checks
 

@@ -44,13 +44,6 @@ add_action('init', function () {
     remove_action('wp_print_styles', 'print_emoji_styles');
 });
 
-// This release is a design preview. Remove this in the launch/commerce phase.
-add_filter('wp_robots', function ($robots) {
-    unset($robots['index']);
-    $robots['noindex'] = true;
-    return $robots;
-});
-
 add_action('wp_head', function () {
     $font = takav_has_peyda() ? 'fonts/Peyda-Light.ttf' : 'fonts/Vazirmatn.woff2';
     $type = takav_has_peyda() ? 'font/ttf' : 'font/woff2';
