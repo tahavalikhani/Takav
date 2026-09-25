@@ -8,7 +8,7 @@ The supplied theme ZIP and local preview include the owner's Peyda files. Font b
 
 ## Install on a WordPress staging site
 
-Upload the `takav-wordpress-theme.zip` deliverable through **نمایش ← پوسته‌ها ← افزودن پوسته تازه ← بارگذاری پوسته**, then activate Takav. Alternatively copy `theme/takav` to `wp-content/themes/takav`.
+Download `takav-wordpress-theme.zip` from the root of this repository (do **not** use GitHub's green **Code → Download ZIP** button — that archive wraps the theme in extra folders and WordPress reports a missing `style.css`). Upload it through **نمایش ← پوسته‌ها ← افزودن پوسته تازه ← بارگذاری پوسته**, then activate Takav. Alternatively copy `theme/takav` to `wp-content/themes/takav`.
 
 The homepage uses `front-page.php` with either WordPress reading setting. No WooCommerce, page builder, account, merchant key or eNamad is needed to review this design. This theme does not disable checkout provided by unrelated installed plugins: use a staging site for review.
 
