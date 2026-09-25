@@ -33,7 +33,7 @@ add_action('wp_enqueue_scripts', function () {
         wp_enqueue_style('takav-peyda', takav_asset('css/peyda.css'), array('takav'), filemtime($dir . '/assets/css/peyda.css'));
     }
     wp_enqueue_script('takav', takav_asset('js/storefront.js'), array(), filemtime($dir . '/assets/js/storefront.js'), array('strategy' => 'defer', 'in_footer' => true));
-    if (is_front_page()) {
+    if (takav_is_home_view()) {
         wp_dequeue_style('wp-block-library');
         wp_dequeue_style('global-styles');
     }
@@ -58,8 +58,9 @@ add_filter('document_title_parts', function ($parts) {
     $id = takav_current_product_id();
     if ($id) {
         $parts['title'] = takav_catalog()[$id]['name'] . ' — کالکشن اول';
-    } elseif (is_front_page()) {
+    } elseif (takav_is_home_view()) {
         $parts['title'] = 'تکاو — هودی و شلوار، کالکشن اول';
+        unset($parts['site']);
     }
     return $parts;
 });

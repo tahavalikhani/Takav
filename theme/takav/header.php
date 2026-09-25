@@ -12,7 +12,7 @@
 <header class="site-header">
     <div class="header-inner wrap">
         <nav class="main-nav" aria-label="منوی اصلی">
-            <a href="<?php echo esc_url(home_url('/')); ?>" <?php if (is_front_page() && !$current_product) echo 'aria-current="page"'; ?>>همه</a>
+            <a href="<?php echo esc_url(home_url('/')); ?>" <?php if (takav_is_home_view() && !$current_product) echo 'aria-current="page"'; ?>>همه</a>
             <?php foreach (array('hoodie' => 'هودی', 'pants' => 'شلوار') as $nav_product_id => $label) : ?>
             <a href="<?php echo esc_url(takav_product_url($nav_product_id)); ?>" <?php if ($current_product === $nav_product_id) echo 'aria-current="page"'; ?>><?php echo esc_html($label); ?></a>
             <?php endforeach; ?>

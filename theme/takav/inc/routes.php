@@ -28,6 +28,11 @@ function takav_view_url($view) {
     return get_option('permalink_structure') ? home_url('/' . $view . '/') : add_query_arg('takav_view', $view, home_url('/'));
 }
 
+// The collection home also covers a root post list, e.g. "static page" chosen with no homepage set.
+function takav_is_home_view() {
+    return is_front_page() || (is_home() && !get_queried_object_id());
+}
+
 function takav_current_product_id() {
     $value = get_query_var('takav_product', '');
     return is_string($value) && isset(takav_catalog()[$value]) ? $value : '';
@@ -69,6 +74,7 @@ add_filter('template_include', function ($template) {
     if ($view !== '') return get_template_directory() . '/404.php';
     if (takav_current_product_id()) return get_template_directory() . '/single-takav.php';
     if (get_query_var('takav_product', '') !== '') return get_template_directory() . '/404.php';
+    if (takav_is_home_view()) return get_template_directory() . '/front-page.php';
     return $template;
 });
 
