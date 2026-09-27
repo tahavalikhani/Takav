@@ -1,7 +1,41 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "steps": [
-    {"step": "activateTheme", "themeFolderName": "takav"},
-    {"step": "setSiteOptions", "options": {"blogname": "تکاو", "blogdescription": "اولین کالکشن تکاو", "blog_public": "1"}}
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "woocommerce"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "activateTheme",
+      "themeFolderName": "takav"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "تکاو",
+        "blogdescription": "اولین کالکشن تکاو",
+        "blog_public": "1",
+        "woocommerce_currency": "IRT",
+        "woocommerce_price_num_decimals": "0",
+        "woocommerce_default_country": "IR:THR",
+        "woocommerce_allowed_countries": "specific",
+        "woocommerce_specific_allowed_countries": [
+          "IR"
+        ],
+        "woocommerce_coming_soon": "no",
+        "woocommerce_store_pages_only": "no",
+        "woocommerce_enable_guest_checkout": "no"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php\nrequire '/wordpress/wp-load.php';\nwp_set_current_user(1);\ntakav_seed_products();\nforeach (array('hoodie' => 2400000, 'pants' => 1900000) as $id => $price) {\n    $product = wc_get_product(wc_get_product_id_by_sku('takav-' . $id));\n    $product->set_regular_price($price);\n    $product->set_status('publish');\n    $product->save();\n}\n$zone = new WC_Shipping_Zone();\n$zone->set_zone_name('ایران');\n$zone->add_location('IR', 'country');\n$zone->save();\n$instance = $zone->add_shipping_method('flat_rate');\nupdate_option('woocommerce_flat_rate_' . $instance . '_settings', array('title' => 'پست پیشتاز', 'tax_status' => 'none', 'cost' => '80000'));\nupdate_option('woocommerce_cod_settings', array('enabled' => 'yes', 'title' => 'پرداخت در محل', 'description' => 'هنگام تحویل، با کارت بانکی پرداخت کن.', 'instructions' => '', 'enable_for_methods' => array(), 'enable_for_virtual' => 'yes'));\nupdate_option('woocommerce_bacs_settings', array('enabled' => 'yes', 'title' => 'کارت به کارت', 'description' => 'شماره کارت بعد از ثبت سفارش نمایش داده می‌شود.', 'instructions' => 'مبلغ را به کارت زیر واریز کن و کد پیگیری را بفرست.'));\nupdate_option('woocommerce_bacs_accounts', array(array('account_name' => 'نمونه', 'account_number' => '6037000000000000', 'bank_name' => 'بانک نمونه', 'sort_code' => '', 'iban' => '', 'bic' => '')));\n"
+    }
   ]
 }

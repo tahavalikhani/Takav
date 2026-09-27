@@ -21,12 +21,25 @@ This repository is a **classic WordPress theme** (PHP templates, not a block the
 
 ## 3. Things the owner decided. Do not change them without being asked
 
-- **Search engines must be allowed.** Never add `noindex`, a `wp_robots` filter that blocks indexing, or `blog_public = 0`.
+- **Search engines must be allowed.** Never add `noindex`, a `wp_robots` filter that blocks indexing, or `blog_public = 0`. (WooCommerce itself marks its cart and checkout pages `noindex`; that is expected. Leave it.)
+- **Ordering is guest-only, in short steps.** No sign-up, no account creation, no login wall. The checkout is: ۱ name + mobile (email optional) → ۲ address → ۳ delivery + payment → ۴ tick page with the tracking number. Do not turn it back into one long form, and do not add fields the owner did not ask for.
 - **Font: Peyda** (Light 300, Regular 400, Medium 500) from `theme/takav/assets/fonts/Peyda-*.ttf`, with Vazirmatn as the fallback. The Peyda files are licensed. This repository is **public**, so never commit them (they are in `.gitignore`). They are added locally only when building the ZIP for the owner.
 - **Do not change the design** (layout, colors, spacing, copy, images) unless the task explicitly asks for it. A compatibility fix must look identical before and after.
 - Persian, RTL (`lang="fa-IR" dir="rtl"`). Black with orange accents.
 
-## 4. WordPress coding rules
+## 4. How ordering is built (keep it this way)
+
+- All shop code lives in `theme/takav/inc/shop.php`; templates are `page-cart.php`, `checkout.php`, `order-received.php` and `page-track.php`.
+- Orders go through **WooCommerce's own checkout** (`WC_Checkout::process_checkout`, triggered by posting `woocommerce_checkout_place_order` with the `woocommerce-process_checkout` nonce and standard `billing_*` field names). Never create orders by hand and never bypass WooCommerce's payment step: payment plugins (Zarinpal etc.), stock and emails depend on it.
+- The theme renders WooCommerce's cart and checkout pages itself (`template_include`), so it works whether those pages contain blocks or shortcodes. Leave `order-pay` to WooCommerce, and never redirect `order-received` or `order-pay`: payment gateways return there.
+- Products are matched by SKU `takav-<catalog id>` (`takav_wc_product()`). A product is only for sale when it is **published**, has a price and is in stock.
+- WooCommerce 11 needs `variation_id` for sized products; the theme looks it up from the chosen attributes before WooCommerce handles the request. Keep that.
+- Normalise phone numbers and postcodes (Persian and Arabic digits → Latin) before validating or storing. Mobile numbers are stored as `09XXXXXXXXX`.
+- Persian digits are for storefront display only (`formatted_woocommerce_price`, `takav_fa_digits()`), never in wp-admin, and never by running a replace over HTML.
+- Every WooCommerce call must be guarded (`takav_shop_ready()`): the theme must still render with WooCommerce deactivated.
+- Before using a WooCommerce function, check that it exists in the installed WooCommerce version's source. Do not guess function names.
+
+## 5. WordPress coding rules
 
 - Support PHP 7.4+ and WordPress 6.5+. No PHP 8-only syntax (no `match`, no named arguments, no `str_contains`, no union types).
 - Start every PHP file with `defined('ABSPATH') || exit;`.
@@ -36,10 +49,11 @@ This repository is a **classic WordPress theme** (PHP templates, not a block the
 - No external CDNs. Everything the theme needs lives inside `theme/takav/`.
 - Nothing may require Node, a build step or Composer on the host. The theme must run straight from the ZIP.
 
-## 5. Check before you say it is done
+## 6. Check before you say it is done
 
 1. `php -l` on every changed PHP file.
 2. `unzip -l dist/takav.zip | head` shows `takav/style.css` near the top.
-3. Install the ZIP on a real WordPress (the WordPress Playground CLI in `devDependencies` works) using the normal theme upload. Then check `/`, `/collection/hoodie/`, `/collection/pants/`, `/collection-one/` and `/cart/`. Test with Settings → Reading on "Your latest posts" **and** on "A static page" with no homepage chosen. No "Hello world!", no PHP errors, no `noindex`.
-4. Run `corepack pnpm preview` and `corepack pnpm test`. Both must pass.
-5. Report honestly what you tested and what you could not test.
+3. Install the ZIP on a real WordPress (the WordPress Playground CLI in `devDependencies` works) using the normal theme upload. Then check `/`, `/collection/hoodie/`, `/collection/pants/`, `/collection-one/`, `/cart/` and `/track/`. Test with Settings → Reading on "Your latest posts" **and** on "A static page" with no homepage chosen. No "Hello world!", no PHP errors, no `noindex`.
+4. Run `corepack pnpm preview` and `corepack pnpm test`. Both must pass. The test places real guest orders (with and without JavaScript) on a WooCommerce test store and checks the tick page and the tracking page.
+5. Also check: a product with sizes, a failed payment page, and the whole site with WooCommerce **deactivated** (no PHP errors).
+6. Report honestly what you tested and what you could not test.

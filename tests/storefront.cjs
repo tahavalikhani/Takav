@@ -61,23 +61,79 @@ const output =
   await page.goBack();
   assert.equal(new URL(page.url()).pathname, "/");
   await page.locator(".collection-invite").click();
+  await page.waitForURL(/collection-one/);
   assert.equal(await page.locator(".campaign-piece").count(), 2);
   await page.locator(".campaign-piece").first().click();
   assert.equal(await page.locator("h1").innerText(), "هودی تکاو");
-  await page.locator("[data-add-cart=hoodie]").click();
-  await page.locator(".header-cart").click();
+  // Guest order: product → cart → three short steps → tick with tracking number → tracking page.
+  await page.locator(".add-form button").click();
+  await page.waitForURL(/\/cart\//);
   assert.equal(await page.locator(".cart-row h2").innerText(), "هودی تکاو");
-  await page.reload();
-  assert.equal(await page.locator(".cart-row h2").innerText(), "هودی تکاو");
-  await page.locator(".cart-row > button").click();
-  assert.equal(await page.locator(".cart-row").count(), 0);
+  assert.equal(await page.locator("[data-cart-count]").innerText(), "۱");
+  await page.locator('.cart-actions button[aria-label^="اضافه"]').click();
+  await page.waitForLoadState();
+  assert.equal(await page.locator(".cart-actions span").innerText(), "۲");
+  await page.locator('.cart-actions button[aria-label^="کم"]').click();
+  await page.waitForLoadState();
+  assert.equal(await page.locator(".cart-actions span").innerText(), "۱");
+  await page.screenshot({ path: path.join(output, "order-1-cart.png"), fullPage: true });
+  await page.locator(".cart-checkout").click();
+  await page.waitForSelector(".takav-checkout.is-stepped");
+  const visibleStep = () =>
+    page.locator(".checkout-step:not([hidden])").getAttribute("data-step");
+  assert.equal(await visibleStep(), "0");
+  await page.screenshot({ path: path.join(output, "order-2-details.png"), fullPage: true });
+  await page.locator("[data-step='0'] [data-next]").click();
+  assert.equal(await visibleStep(), "0", "Empty name and phone must not continue");
+  await page.fill("#billing_first_name", "سارا نمونه");
+  await page.fill("#billing_phone", "۰۹۱۲ ۳۴۵ ۶۷۸۹");
+  await page.locator("[data-step='0'] [data-next]").click();
+  assert.equal(await visibleStep(), "1");
+  assert.equal(await page.inputValue("#billing_phone"), "09123456789");
+  await page.selectOption("#billing_state", "THR");
+  await page.fill("#billing_city", "تهران");
+  await page.fill("#billing_address_1", "خیابان نمونه، کوچهٔ دوم، پلاک ۱۲");
+  await page.fill("#billing_postcode", "123");
+  await page.locator("[data-step='1'] [data-next]").click();
+  assert.equal(await visibleStep(), "1", "A short postcode must not continue");
+  await page.fill("#billing_postcode", "۱۲۳۴۵۶۷۸۹۰");
+  await page.screenshot({ path: path.join(output, "order-3-address.png"), fullPage: true });
+  await page.locator("[data-step='1'] [data-next]").click();
+  assert.equal(await visibleStep(), "2");
+  await page.waitForSelector(".checkout-review:not([aria-busy])");
+  assert.equal(await page.locator("[data-shipping-method]:checked").count(), 1);
+  assert.match(await page.locator(".checkout-total dd").innerText(), /۲,۴۸۰,۰۰۰/);
+  await page.locator(".choice label", { hasText: "پرداخت در محل" }).click();
+  await page.screenshot({ path: path.join(output, "order-4-payment.png"), fullPage: true });
+  await Promise.all([
+    page.waitForURL(/order-received/),
+    page.locator(".step-submit").click(),
+  ]);
+  const trackingCode = (await page.locator("[data-copy-source]").innerText()).trim();
+  assert.match(trackingCode, /^\d+$/);
+  assert.equal(await page.locator("h1").innerText(), "سفارشت ثبت شد");
+  assert.equal(await page.locator("[data-cart-count]").innerText(), "۰");
+  await page.waitForTimeout(1300);
+  await page.screenshot({ path: path.join(output, "order-5-done.png"), fullPage: true });
+  await page.locator(".done-card .done-primary").click();
+  assert.equal(await page.inputValue("#track-order"), trackingCode);
+  await page.fill("#track-phone", "09120000000");
+  await page.locator(".track-form button").click();
+  assert.match(await page.locator(".shop-notice").innerText(), /پیدا نشد/);
+  await page.fill("#track-phone", "+98 912 345 6789");
+  await page.locator(".track-form button").click();
+  assert.match(await page.locator(".track-result h2").innerText(), new RegExp(trackingCode));
+  assert.match(await page.locator(".track-status").innerText(), /.+/);
+  await page.screenshot({ path: path.join(output, "order-6-track.png"), fullPage: true });
   for (const url of [base, hoodie, pants, `${base}/collection-one/`, `${base}/cart/`]) {
     await page.goto(url, { waitUntil: "networkidle" });
     assert.equal(await page.locator("html").getAttribute("dir"), "rtl");
-    assert.equal(
-      await page.locator("meta[name=robots][content*=noindex]").count(),
-      0,
-    );
+    // WooCommerce keeps its cart out of search results; every other page must be indexable.
+    if (!url.endsWith("/cart/"))
+      assert.equal(
+        await page.locator("meta[name=robots][content*=noindex]").count(),
+        0,
+      );
     assert.equal(await page.locator("h1").count(), 1);
     for (const width of [320, 390, 768, 1440, 1920]) {
       await page.setViewportSize({ width, height: 900 });
@@ -118,6 +174,24 @@ const output =
   await fallback.locator(".product-link").first().click();
   assert.equal(await fallback.locator("h1").innerText(), "هودی تکاو");
   assert.equal(await fallback.locator(".gallery-thumbnails a").count(), 3);
+  // Without JavaScript the checkout shows every step at once and still places the order.
+  if (!process.env.TAKAV_STATIC) {
+    await fallback.locator(".add-form button").click();
+    await fallback.locator(".cart-checkout").click();
+    assert.equal(await fallback.locator(".checkout-step:not([hidden])").count(), 3);
+    await fallback.fill("#billing_first_name", "علی نمونه");
+    await fallback.fill("#billing_phone", "09351234567");
+    await fallback.selectOption("#billing_state", "ESF");
+    await fallback.fill("#billing_city", "اصفهان");
+    await fallback.fill("#billing_address_1", "خیابان نمونه");
+    await fallback.locator(".choice label", { hasText: "کارت به کارت" }).click();
+    await Promise.all([
+      fallback.waitForURL(/order-received/),
+      fallback.locator(".step-submit").click(),
+    ]);
+    assert.match((await fallback.locator("[data-copy-source]").innerText()).trim(), /^\d+$/);
+    assert.match(await fallback.locator(".done-gateway").innerText(), /6037000000000000/);
+  }
   if (!process.env.TAKAV_STATIC) {
     assert.equal(
       (await page.goto(`${base}/?takav_product=missing`)).status(),

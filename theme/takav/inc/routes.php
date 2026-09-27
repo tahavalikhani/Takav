@@ -10,12 +10,19 @@ add_filter('query_vars', function ($vars) { $vars[] = 'takav_view'; return $vars
 
 // Also handles a request before the host has flushed its rewrite rules.
 add_action('parse_request', function ($request) {
-    if ($request->request === 'collection-one' || $request->request === 'collection-one/') {
-        $request->query_vars = array('takav_view' => 'collection-one');
+    $path = trim($request->request, '/');
+    if ($path === 'collection-one' || $path === 'track') {
+        $request->query_vars = array('takav_view' => $path);
         return;
     }
-    if ($request->request === 'cart' || $request->request === 'cart/') {
-        $request->query_vars = array('takav_view' => 'cart');
+    // /cart/ and /checkout/ open WooCommerce's own pages, whatever their slug; without WooCommerce, the theme's cart.
+    if ($path === 'cart' || $path === 'checkout') {
+        $page = function_exists('wc_get_page_id') ? wc_get_page_id($path) : 0;
+        if ($page > 0 && get_post_status($page) === 'publish') {
+            $request->query_vars = array('page_id' => $page);
+        } elseif ($path === 'cart') {
+            $request->query_vars = array('takav_view' => 'cart');
+        }
         return;
     }
     if (preg_match('#^collection/([^/]+)/?$#', $request->request, $matches)) {
@@ -23,8 +30,12 @@ add_action('parse_request', function ($request) {
     }
 });
 
+function takav_views() {
+    return array('collection-one', 'cart', 'track');
+}
+
 function takav_view_url($view) {
-    if (!in_array($view, array('collection-one', 'cart'), true)) return home_url('/');
+    if (!in_array($view, takav_views(), true)) return home_url('/');
     return get_option('permalink_structure') ? home_url('/' . $view . '/') : add_query_arg('takav_view', $view, home_url('/'));
 }
 
@@ -48,7 +59,7 @@ add_action('template_redirect', function () {
     $view = get_query_var('takav_view', '');
     if ($view !== '') {
         global $wp_query;
-        if (!in_array($view, array('collection-one', 'cart'), true)) {
+        if (!in_array($view, takav_views(), true)) {
             $wp_query->set_404(); status_header(404); return;
         }
         $wp_query->is_404 = false; $wp_query->is_home = false; $wp_query->is_page = false;
@@ -70,7 +81,7 @@ add_action('template_redirect', function () {
 
 add_filter('template_include', function ($template) {
     $view = get_query_var('takav_view', '');
-    if (in_array($view, array('collection-one', 'cart'), true)) return get_template_directory() . '/page-' . $view . '.php';
+    if (in_array($view, takav_views(), true)) return get_template_directory() . '/page-' . $view . '.php';
     if ($view !== '') return get_template_directory() . '/404.php';
     if (takav_current_product_id()) return get_template_directory() . '/single-takav.php';
     if (get_query_var('takav_product', '') !== '') return get_template_directory() . '/404.php';

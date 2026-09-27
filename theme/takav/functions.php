@@ -4,6 +4,7 @@ defined('ABSPATH') || exit;
 
 require_once get_template_directory() . '/inc/catalog.php';
 require_once get_template_directory() . '/inc/routes.php';
+require_once get_template_directory() . '/inc/shop.php';
 
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
@@ -54,7 +55,8 @@ add_action('wp_head', function () {
 add_filter('document_title_parts', function ($parts) {
     $view = get_query_var('takav_view', '');
     if ($view === 'collection-one') { $parts['title'] = 'کالکشن ۰۱ — تکاو'; return $parts; }
-    if ($view === 'cart') { $parts['title'] = 'سبد نمایشی — تکاو'; return $parts; }
+    if ($view === 'cart') { $parts['title'] = 'سبد خرید — تکاو'; return $parts; }
+    if ($view === 'track') { $parts['title'] = 'پیگیری سفارش — تکاو'; return $parts; }
     $id = takav_current_product_id();
     if ($id) {
         $parts['title'] = takav_catalog()[$id]['name'] . ' — کالکشن اول';

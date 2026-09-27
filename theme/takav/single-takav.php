@@ -1,5 +1,5 @@
 <?php
-/** Dedicated collection product page. No commerce integration. */
+/** Dedicated collection product page. Buying goes through WooCommerce when the product is published. */
 defined('ABSPATH') || exit;
 $id = takav_current_product_id();
 $catalog = takav_catalog();
@@ -29,7 +29,7 @@ $id = takav_current_product_id();
             <p class="product-edition"><bdi>COLLECTION 01</bdi></p>
             <h1 id="product-title"><?php echo esc_html($product['name']); ?></h1>
             <div class="product-color"><span class="color-swatch" aria-hidden="true"></span>مشکی / نارنجی</div>
-            <div class="purchase-state"><button type="button" data-add-cart="<?php echo esc_attr($id); ?>">افزودن به سبد نمایشی</button><p>پیش‌نمایش سبد خرید · ثبت سفارش و پرداخت فعال نیست.</p><p class="cart-feedback" role="status" aria-live="polite"></p></div>
+            <?php takav_purchase_form($id); ?>
             <details class="product-specs" open><summary>جزئیات محصول<span aria-hidden="true">+</span></summary><ul><?php foreach ($product['features'] as $feature) : ?><li><?php echo esc_html($feature); ?></li><?php endforeach; ?></ul></details>
             <aside class="matching-product" aria-labelledby="matching-title"><h2 id="matching-title">همراه این محصول</h2><a href="<?php echo esc_url(takav_product_url($other_id)); ?>"><img src="<?php echo esc_url(takav_asset('images/' . $other['image'] . '-640.webp')); ?>" width="80" height="100" alt="" loading="lazy"><span><?php echo esc_html($other['name']); ?><small>مشکی / نارنجی</small></span><?php takav_icon('arrow'); ?></a></aside>
         </section>

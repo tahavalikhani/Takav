@@ -52,77 +52,160 @@
   });
 })();
 
-// Local, clearly labelled preview cart. It never creates an order.
+// Checkout in steps. Without JavaScript every step shows and the form posts as usual.
 (() => {
   "use strict";
-  const key = "takav-preview-cart-v1";
-  const labels = { hoodie: "هودی تکاو", pants: "شلوار تکاو" };
-  const persian = (number) => String(number).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]);
-  function read() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(key) || "{}");
-      return Object.fromEntries(Object.keys(labels).map((id) => [id, Math.min(9, Math.max(0, Number(saved[id]) || 0))]));
-    } catch (_) { return { hoodie: 0, pants: 0 }; }
-  }
-  function write(cart) {
-    try { localStorage.setItem(key, JSON.stringify(cart)); return true; }
-    catch (_) { return false; }
-  }
-  function updateCount(cart) {
-    document.querySelectorAll("[data-cart-count]").forEach((count) => {
-      count.textContent = persian(cart.hoodie + cart.pants);
+  const latin = (value) =>
+    value
+      .replace(/[۰-۹]/g, (digit) => "۰۱۲۳۴۵۶۷۸۹".indexOf(digit))
+      .replace(/[٠-٩]/g, (digit) => "٠١٢٣٤٥٦٧٨٩".indexOf(digit));
+  const phone = (value) => {
+    let digits = latin(value).replace(/\D+/g, "");
+    if (digits.startsWith("00")) digits = digits.slice(2);
+    if (digits.length === 12 && digits.startsWith("98")) digits = "0" + digits.slice(2);
+    if (digits.length === 10 && digits.startsWith("9")) digits = "0" + digits;
+    return digits;
+  };
+  document.querySelectorAll("[data-phone], [data-postcode], [data-digits]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const value = latin(input.value);
+      if (value !== input.value) input.value = value;
+      input.setCustomValidity("");
     });
-  }
-  function productUrl(id) {
-    return document.querySelector(`.main-nav a[href*="${id}"]`)?.href || "#";
-  }
-  const assetScript = document.querySelector('script[src*="/assets/js/storefront"]');
-  const imageUrl = (id) => assetScript ? new URL(`../images/takav-${id}-640.webp`, assetScript.src).href : "";
-  function render(cart) {
-    const container = document.getElementById("cart-items");
-    if (!container) return;
-    container.replaceChildren();
-    const ids = Object.keys(labels).filter((id) => cart[id]);
-    if (!ids.length) {
-      const empty = document.createElement("p"); empty.className = "cart-empty";
-      empty.textContent = "سبد هنوز خالی است."; container.append(empty); return;
+  });
+  function checkField(input) {
+    input.setCustomValidity("");
+    if (input.matches("[data-phone]") && input.value.trim()) {
+      input.value = phone(input.value);
+      if (!/^09\d{9}$/.test(input.value))
+        input.setCustomValidity("شماره موبایل را کامل وارد کن؛ مثل ۰۹۱۲۳۴۵۶۷۸۹.");
     }
-    ids.forEach((id) => {
-      const row = document.createElement("div"); row.className = "cart-row";
-      const link = document.createElement("a"); link.href = productUrl(id);
-      const image = document.createElement("img"); image.src = imageUrl(id); image.alt = labels[id]; image.width = 110; image.height = 136;
-      link.append(image);
-      const info = document.createElement("div");
-      const title = document.createElement("h2"); title.textContent = labels[id];
-      const color = document.createElement("p"); color.textContent = "مشکی / نارنجی";
-      const actions = document.createElement("div"); actions.className = "cart-actions";
-      const decrement = document.createElement("button"); decrement.type = "button"; decrement.textContent = "−"; decrement.setAttribute("aria-label", `کم کردن ${labels[id]}`);
-      const quantity = document.createElement("span"); quantity.textContent = persian(cart[id]);
-      const increment = document.createElement("button"); increment.type = "button"; increment.textContent = "+"; increment.setAttribute("aria-label", `اضافه کردن ${labels[id]}`);
-      const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "حذف";
-      const change = (number) => { const next = { ...cart, [id]: Math.min(9, Math.max(0, number)) }; if (write(next)) { updateCount(next); render(next); } };
-      decrement.addEventListener("click", () => change(cart[id] - 1));
-      increment.addEventListener("click", () => change(cart[id] + 1));
-      remove.addEventListener("click", () => change(0));
-      actions.append(decrement, quantity, increment); info.append(title, color, actions); row.append(link, info, remove); container.append(row);
-    });
-    const note = document.createElement("p"); note.className = "cart-note"; note.textContent = "این یک سبد نمایشی است؛ قیمت و پرداخت بعداً اضافه می‌شوند."; container.append(note);
+    if (input.matches("[data-postcode]") && input.value.trim()) {
+      input.value = latin(input.value).replace(/\D+/g, "");
+      if (!/^\d{10}$/.test(input.value)) input.setCustomValidity("کد پستی باید ۱۰ رقم باشد.");
+    }
+    return input.checkValidity();
   }
-  const cart = read(); updateCount(cart); render(cart);
-  document.querySelectorAll("[data-add-cart]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const id = button.dataset.addCart;
-      if (!Object.hasOwn(labels, id)) return;
-      const next = read(); next[id] = Math.min(9, next[id] + 1);
-      const feedback = button.parentElement.querySelector(".cart-feedback");
-      if (!write(next)) { feedback.textContent = "مرورگر سبد را ذخیره نکرد."; return; }
-      updateCount(next);
-      feedback.replaceChildren();
-      const message = document.createTextNode("به سبد اضافه شد. ");
-      const link = document.createElement("a");
-      link.href = document.querySelector(".header-cart")?.href || "#";
-      link.textContent = "دیدن سبد ↗";
-      feedback.append(message, link);
+  document.querySelectorAll(".track-form").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      const fields = [...form.querySelectorAll("input:not([type=hidden])")];
+      if (!fields.every(checkField)) {
+        event.preventDefault();
+        fields.find((field) => !field.checkValidity())?.reportValidity();
+      }
     });
+  });
+  document.querySelector(".track-result")?.focus();
+
+  const form = document.querySelector(".takav-checkout");
+  if (!form) return;
+  const steps = [...form.querySelectorAll(".checkout-step")];
+  const markers = [...document.querySelectorAll("[data-step-marker]")];
+  const review = form.querySelector(".checkout-review");
+  const submit = form.querySelector(".step-submit");
+  let current = 0;
+  form.noValidate = true;
+  form.classList.add("is-stepped");
+  const fieldsOf = (step) =>
+    [...step.querySelectorAll("input, select, textarea")].filter(
+      (field) => field.type !== "hidden" && !field.closest(".choice-detail"),
+    );
+  function validate(step) {
+    const fields = fieldsOf(step);
+    const invalid = fields.find((field) => !checkField(field));
+    if (invalid) invalid.reportValidity();
+    return !invalid;
+  }
+  function show(index, focus = true) {
+    current = index;
+    steps.forEach((step, n) => (step.hidden = n !== index));
+    markers.forEach((marker, n) => {
+      marker.classList.toggle("is-done", n < index);
+      if (n === index) marker.setAttribute("aria-current", "step");
+      else marker.removeAttribute("aria-current");
+    });
+    if (focus) {
+      steps[index].querySelector("[data-step-title]").focus({ preventScroll: true });
+      form.closest(".checkout-page").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  async function refreshReview(extra = {}) {
+    const data = new FormData();
+    data.append("nonce", form.dataset.reviewNonce);
+    ["billing_state", "billing_city", "billing_postcode"].forEach((name) =>
+      data.append(name.replace("billing_", ""), form.elements[name].value),
+    );
+    Object.entries(extra).forEach(([name, value]) => data.append(name, value));
+    review.setAttribute("aria-busy", "true");
+    submit.disabled = true;
+    try {
+      const response = await fetch(form.dataset.reviewUrl, { method: "POST", body: data, credentials: "same-origin" });
+      const result = await response.json();
+      if (result.success) review.innerHTML = result.data.html;
+    } catch (_) {
+      // Keep the options already on the page; WooCommerce re-checks them when the order is placed.
+    } finally {
+      review.removeAttribute("aria-busy");
+      submit.disabled = false;
+    }
+  }
+  form.addEventListener("click", (event) => {
+    if (event.target.closest("[data-next]")) {
+      if (!validate(steps[current])) return;
+      if (current === 1) refreshReview();
+      show(current + 1);
+    }
+    if (event.target.closest("[data-back]")) show(current - 1);
+  });
+  form.addEventListener("change", (event) => {
+    if (event.target.matches("[data-shipping-method]"))
+      refreshReview({ [event.target.name]: event.target.value });
+  });
+  form.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.target.tagName === "TEXTAREA" || current === steps.length - 1) return;
+    event.preventDefault();
+    steps[current].querySelector("[data-next]")?.click();
+  });
+  form.addEventListener("submit", (event) => {
+    const invalid = steps.findIndex((step) => !fieldsOf(step).every(checkField));
+    if (invalid !== -1) {
+      event.preventDefault();
+      show(invalid);
+      validate(steps[invalid]);
+      return;
+    }
+    if (submit.disabled) {
+      event.preventDefault();
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = "در حال ثبت سفارش…";
+  });
+  // Coming back from the bank with the browser's Back button restores a disabled button.
+  window.addEventListener("pageshow", () => {
+    submit.disabled = false;
+    submit.textContent = "ثبت سفارش";
+  });
+  // After a server-side error, open the step with the field WooCommerce flagged.
+  const flagged = document.querySelector(".shop-notices [data-field]");
+  const flaggedField = flagged && document.getElementById(flagged.dataset.field);
+  const errorStep = flaggedField ? steps.findIndex((step) => step.contains(flaggedField)) : document.querySelector(".shop-notices .is-error") ? steps.length - 1 : 0;
+  show(Math.max(0, errorStep), false);
+})();
+
+// Copy the tracking number.
+(() => {
+  "use strict";
+  const button = document.querySelector("[data-copy]");
+  const source = document.querySelector("[data-copy-source]");
+  if (!button || !source || !navigator.clipboard) return;
+  button.hidden = false;
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(source.textContent.trim());
+      button.textContent = "کپی شد";
+    } catch (_) {
+      button.textContent = "کپی نشد";
+    }
   });
 })();

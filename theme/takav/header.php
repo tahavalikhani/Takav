@@ -18,6 +18,6 @@
             <?php endforeach; ?>
         </nav>
         <a class="wordmark" href="<?php echo esc_url(home_url('/')); ?>" aria-label="تکاو، صفحه اصلی"><bdi>TAKAV<span aria-hidden="true">.</span></bdi></a>
-        <a class="header-cart" href="<?php echo esc_url(takav_view_url('cart')); ?>">سبد <span data-cart-count>۰</span></a>
+        <a class="header-cart" href="<?php echo esc_url(takav_cart_url()); ?>">سبد <span data-cart-count><?php echo esc_html(takav_fa_digits(takav_cart_count())); ?></span></a>
     </div>
 </header>
