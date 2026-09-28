@@ -72,10 +72,11 @@ get_header(); ?>
                     <?php endforeach; ?>
                 </fieldset>
                 <?php endif; ?>
+                <p class="checkout-preorder">پیش‌فروش: حدود <?php echo esc_html(takav_fa_digits(takav_preorder_days())); ?> روز بعد آماده و با تیپاکس ارسال می‌شود. بعد از پرداخت، کد پیگیری و لینک تلگرام را می‌گیری.</p>
                 <?php if ($terms_page) : ?>
                 <p class="terms"><input type="hidden" name="terms-field" value="1"><label><input type="checkbox" name="terms" value="1" required> <a href="<?php echo esc_url(get_permalink($terms_page)); ?>" target="_blank" rel="noopener">قوانین فروشگاه</a> را خواندم و می‌پذیرم.</label></p>
                 <?php endif; ?>
-                <div class="step-buttons"><button class="step-back" type="button" data-back>بازگشت</button><button class="step-submit" type="submit">ثبت سفارش</button></div>
+                <div class="step-buttons"><button class="step-back" type="button" data-back>بازگشت</button><button class="step-submit" type="submit">ثبت سفارش و پرداخت</button></div>
             </fieldset>
         </form>
 

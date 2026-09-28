@@ -17,7 +17,7 @@ if (isset($_POST['takav_track'])) {
     }
 }
 // phpcs:enable
-$steps = array('ثبت سفارش', 'تأیید و آماده‌سازی', 'ارسال');
+$steps = array('ثبت سفارش', 'آماده‌سازی (حدود ' . takav_fa_digits(takav_preorder_days()) . ' روز)', 'ارسال با تیپاکس');
 get_header(); ?>
 <main id="main" class="track-page wrap">
     <div class="cart-heading"><p><bdi>TAKAV / TRACK</bdi></p><h1>پیگیری سفارش</h1><span>کد پیگیری را از صفحهٔ پایان خرید یا پیامک و ایمیل سفارش بردار.</span></div>
@@ -56,6 +56,7 @@ get_header(); ?>
             </ul>
         </div>
         <?php endif; ?>
+        <?php if (!$order->needs_payment()) takav_telegram_button('done-telegram'); ?>
         <?php if ($order->needs_payment()) : ?><a class="done-primary" href="<?php echo esc_url($order->get_checkout_payment_url()); ?>">پرداخت سفارش</a><?php endif; ?>
     </section>
     <?php endif; ?>

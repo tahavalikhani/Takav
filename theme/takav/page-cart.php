@@ -42,7 +42,8 @@ get_header(); ?>
         <?php endforeach; ?>
         <div class="cart-summary">
             <p><span>جمع سبد</span><strong><?php echo wp_kses_post(WC()->cart->get_cart_subtotal()); ?></strong></p>
-            <?php if (WC()->cart->needs_shipping()) : ?><p class="cart-note">هزینهٔ ارسال در مرحلهٔ بعد، بعد از انتخاب استان، حساب می‌شود.</p><?php endif; ?>
+            <?php if (WC()->cart->needs_shipping()) : ?><p class="cart-note">ارسال با تیپاکس؛ هزینهٔ ارسال را هنگام تحویل می‌پردازی (پس‌کرایه).</p><?php endif; ?>
+            <p class="cart-note">پیش‌فروش: حدود <?php echo esc_html(takav_fa_digits(takav_preorder_days())); ?> روز بعد از سفارش آماده و ارسال می‌شود.</p>
             <a class="cart-checkout" href="<?php echo esc_url(wc_get_checkout_url()); ?>">ادامه و ثبت سفارش <span aria-hidden="true">←</span></a>
         </div>
     <?php endif; ?>

@@ -12,6 +12,21 @@
       }
     },
     {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "zarinpal-woocommerce-payment-gateway"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/takav-test-bank.php",
+      "data": "<?php\n/** Test only: a bank that approves every payment, standing in for ZarinPal, which can't be reached from the test machine. */\nadd_filter('woocommerce_payment_gateways', function ($gateways) {\n    if (!class_exists('Takav_Test_Bank')) {\n        class Takav_Test_Bank extends WC_Payment_Gateway {\n            public function __construct() {\n                $this->id = 'takav_test_bank';\n                $this->method_title = $this->title = 'درگاه آزمایشی';\n                $this->description = 'فقط برای آزمایش.';\n                $this->enabled = 'yes';\n            }\n            public function process_payment($order_id) {\n                $order = wc_get_order($order_id);\n                $order->payment_complete('TEST-' . $order_id);\n                WC()->cart->empty_cart();\n                return array('result' => 'success', 'redirect' => $this->get_return_url($order));\n            }\n        }\n    }\n    $gateways[] = 'Takav_Test_Bank';\n    return $gateways;\n});\n"
+    },
+    {
       "step": "activateTheme",
       "themeFolderName": "takav"
     },
@@ -35,7 +50,7 @@
     },
     {
       "step": "runPHP",
-      "code": "<?php\nrequire '/wordpress/wp-load.php';\nwp_set_current_user(1);\ntakav_seed_products();\nforeach (array('hoodie' => 2400000, 'pants' => 1900000) as $id => $price) {\n    $product = wc_get_product(wc_get_product_id_by_sku('takav-' . $id));\n    $product->set_regular_price($price);\n    $product->set_status('publish');\n    $product->save();\n}\n$zone = new WC_Shipping_Zone();\n$zone->set_zone_name('ایران');\n$zone->add_location('IR', 'country');\n$zone->save();\n$instance = $zone->add_shipping_method('flat_rate');\nupdate_option('woocommerce_flat_rate_' . $instance . '_settings', array('title' => 'پست پیشتاز', 'tax_status' => 'none', 'cost' => '80000'));\nupdate_option('woocommerce_cod_settings', array('enabled' => 'yes', 'title' => 'پرداخت در محل', 'description' => 'هنگام تحویل، با کارت بانکی پرداخت کن.', 'instructions' => '', 'enable_for_methods' => array(), 'enable_for_virtual' => 'yes'));\nupdate_option('woocommerce_bacs_settings', array('enabled' => 'yes', 'title' => 'کارت به کارت', 'description' => 'شماره کارت بعد از ثبت سفارش نمایش داده می‌شود.', 'instructions' => 'مبلغ را به کارت زیر واریز کن و کد پیگیری را بفرست.'));\nupdate_option('woocommerce_bacs_accounts', array(array('account_name' => 'نمونه', 'account_number' => '6037000000000000', 'bank_name' => 'بانک نمونه', 'sort_code' => '', 'iban' => '', 'bic' => '')));\n"
+      "code": "<?php\nrequire '/wordpress/wp-load.php';\nwp_set_current_user(1);\ntakav_seed_products();\ntakav_seed_shipping();\nforeach (array('hoodie' => 2400000, 'pants' => 1900000) as $id => $price) {\n    $product = wc_get_product(wc_get_product_id_by_sku('takav-' . $id));\n    $product->set_regular_price($price);\n    $product->set_status('publish');\n    $product->save();\n}\n// Owner's choice: ZarinPal only. Pay on delivery is switched on here to prove the theme still hides it.\nupdate_option('woocommerce_cod_settings', array('enabled' => 'yes', 'title' => 'پرداخت در محل'));\nupdate_option('woocommerce_bacs_settings', array('enabled' => 'yes', 'title' => 'کارت به کارت'));\nupdate_option('woocommerce_WC_ZPal_settings', array('enabled' => 'yes', 'title' => 'پرداخت امن زرین‌پال', 'description' => 'پرداخت با همهٔ کارت‌های عضو شتاب.', 'merchantcode' => '00000000-0000-0000-0000-000000000000', 'sandbox' => 'yes'));\nupdate_option('takav_telegram_url', 'https://t.me/takav_test');\n"
     }
   ]
 }

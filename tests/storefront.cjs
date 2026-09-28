@@ -20,7 +20,9 @@ const output =
     external = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
-    if (!request.url().startsWith(base) && !request.url().startsWith("data:"))
+    // ZarinPal's plugin loads its own trust badge on the payment step; everything else must be local.
+    const host = request.url().startsWith("http") ? new URL(request.url()).hostname : "";
+    if (!request.url().startsWith(base) && !request.url().startsWith("data:") && !/(^|\.)zarinpal\.com$/.test(host))
       external.push(request.url());
   });
   await fs.mkdir(output, { recursive: true });
@@ -66,6 +68,7 @@ const output =
   await page.locator(".campaign-piece").first().click();
   assert.equal(await page.locator("h1").innerText(), "هودی تکاو");
   // Guest order: product → cart → three short steps → tick with tracking number → tracking page.
+  assert.match(await page.locator(".preorder-note").innerText(), /پیش‌فروش[\s\S]*۲۰ روز[\s\S]*تلگرام/);
   await page.locator(".add-form button").click();
   await page.waitForURL(/\/cart\//);
   assert.equal(await page.locator(".cart-row h2").innerText(), "هودی تکاو");
@@ -101,9 +104,14 @@ const output =
   await page.locator("[data-step='1'] [data-next]").click();
   assert.equal(await visibleStep(), "2");
   await page.waitForSelector(".checkout-review:not([aria-busy])");
-  assert.equal(await page.locator("[data-shipping-method]:checked").count(), 1);
-  assert.match(await page.locator(".checkout-total dd").innerText(), /۲,۴۸۰,۰۰۰/);
-  await page.locator(".choice label", { hasText: "پرداخت در محل" }).click();
+  assert.equal(await page.locator("[data-shipping-method]").count(), 1, "Tipax is the only delivery option");
+  assert.match(await page.locator(".checkout-review .choice").innerText(), /تیپاکس · پس‌کرایه/);
+  assert.match(await page.locator(".checkout-totals").innerText(), /پس‌کرایه/);
+  assert.match(await page.locator(".checkout-total dd").innerText(), /۲,۴۰۰,۰۰۰/);
+  const gateways = await page.locator("input[name=payment_method]").evaluateAll((inputs) => inputs.map((i) => i.value));
+  assert.ok(gateways.includes("WC_ZPal"), "ZarinPal is offered");
+  assert.ok(!gateways.includes("cod") && !gateways.includes("bacs"), "No pay-on-delivery or card-to-card");
+  await page.locator(".choice label", { hasText: "درگاه آزمایشی" }).click();
   await page.screenshot({ path: path.join(output, "order-4-payment.png"), fullPage: true });
   await Promise.all([
     page.waitForURL(/order-received/),
@@ -113,6 +121,8 @@ const output =
   assert.match(trackingCode, /^\d+$/);
   assert.equal(await page.locator("h1").innerText(), "سفارشت ثبت شد");
   assert.equal(await page.locator("[data-cart-count]").innerText(), "۰");
+  assert.equal(await page.locator(".done-telegram").getAttribute("href"), "https://t.me/takav_test");
+  assert.match(await page.locator(".done-card").innerText(), /TEST-\d+/);
   await page.waitForTimeout(1300);
   await page.screenshot({ path: path.join(output, "order-5-done.png"), fullPage: true });
   await page.locator(".done-card .done-primary").click();
@@ -184,13 +194,12 @@ const output =
     await fallback.selectOption("#billing_state", "ESF");
     await fallback.fill("#billing_city", "اصفهان");
     await fallback.fill("#billing_address_1", "خیابان نمونه");
-    await fallback.locator(".choice label", { hasText: "کارت به کارت" }).click();
+    await fallback.locator(".choice label", { hasText: "درگاه آزمایشی" }).click();
     await Promise.all([
       fallback.waitForURL(/order-received/),
       fallback.locator(".step-submit").click(),
     ]);
     assert.match((await fallback.locator("[data-copy-source]").innerText()).trim(), /^\d+$/);
-    assert.match(await fallback.locator(".done-gateway").innerText(), /6037000000000000/);
   }
   if (!process.env.TAKAV_STATIC) {
     assert.equal(

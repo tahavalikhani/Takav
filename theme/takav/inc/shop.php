@@ -325,7 +325,8 @@ function takav_checkout_review() {
         echo '<div><dt>تخفیف</dt><dd>−' . wp_kses_post(wc_price(WC()->cart->get_coupon_discount_amount($code, WC()->cart->display_cart_ex_tax))) . '</dd></div>';
     }
     if (WC()->cart->needs_shipping()) {
-        echo '<div><dt>هزینهٔ ارسال</dt><dd>' . wp_kses_post(WC()->cart->get_cart_shipping_total()) . '</dd></div>';
+        $shipping_total = takav_cart_is_cash_on_delivery_freight() ? 'پس‌کرایه' : WC()->cart->get_cart_shipping_total();
+        echo '<div><dt>هزینهٔ ارسال</dt><dd>' . wp_kses_post($shipping_total) . '</dd></div>';
     }
     foreach (WC()->cart->get_fees() as $fee) {
         echo '<div><dt>' . esc_html($fee->name) . '</dt><dd>' . wp_kses_post(wc_price($fee->total)) . '</dd></div>';
@@ -458,5 +459,131 @@ function takav_purchase_form($id) {
     }
     echo '<input type="hidden" name="add-to-cart" value="' . esc_attr($product->get_id()) . '"><input type="hidden" name="quantity" value="1">';
     echo '<button type="submit">افزودن به سبد</button></form>';
-    echo '<p>ثبت سفارش بدون نیاز به عضویت.</p></div>';
+    echo '<p>ثبت سفارش بدون نیاز به عضویت.</p>';
+    takav_preorder_note();
+    echo '</div>';
 }
+
+// ---------------------------------------------------------------------------
+// Payment: online through ZarinPal only (owner's decision). Pay on delivery,
+// bank transfer and cheque are never offered, even if enabled in WooCommerce.
+// ---------------------------------------------------------------------------
+
+add_filter('woocommerce_available_payment_gateways', function ($gateways) {
+    if (is_admin() && !wp_doing_ajax()) return $gateways;
+    foreach (array('cod', 'bacs', 'cheque') as $offline) unset($gateways[$offline]);
+    return $gateways;
+});
+
+// ---------------------------------------------------------------------------
+// Delivery: Tipax, paid by the customer on delivery (پس‌کرایه).
+// ---------------------------------------------------------------------------
+
+add_action('woocommerce_shipping_init', function () {
+    if (class_exists('Takav_Tipax_Shipping')) return;
+
+    class Takav_Tipax_Shipping extends WC_Shipping_Method {
+        public function __construct($instance_id = 0) {
+            $this->id = 'takav_tipax';
+            $this->instance_id = absint($instance_id);
+            $this->method_title = 'تیپاکس (پس‌کرایه)';
+            $this->method_description = 'ارسال با تیپاکس؛ هزینهٔ ارسال را مشتری هنگام تحویل به تیپاکس می‌پردازد.';
+            $this->supports = array('shipping-zones', 'instance-settings', 'instance-settings-modal');
+            $this->instance_form_fields = array(
+                'title' => array('title' => 'عنوان', 'type' => 'text', 'default' => 'تیپاکس'),
+            );
+            $this->title = $this->get_option('title', 'تیپاکس');
+            add_action('woocommerce_update_options_shipping_' . $this->id, array($this, 'process_admin_options'));
+        }
+
+        public function calculate_shipping($package = array()) {
+            $this->add_rate(array('id' => $this->get_rate_id(), 'label' => $this->title, 'cost' => 0, 'package' => $package));
+        }
+    }
+});
+
+add_filter('woocommerce_shipping_methods', function ($methods) {
+    $methods['takav_tipax'] = 'Takav_Tipax_Shipping';
+    return $methods;
+});
+
+// When Tipax is available it is the only delivery option.
+add_filter('woocommerce_package_rates', function ($rates) {
+    $tipax = array_filter($rates, function ($rate) { return $rate->get_method_id() === 'takav_tipax'; });
+    return $tipax ? $tipax : $rates;
+}, 20);
+
+function takav_cart_is_cash_on_delivery_freight() {
+    foreach ((array) WC()->session->get('chosen_shipping_methods', array()) as $method) {
+        if (strpos((string) $method, 'takav_tipax') === 0) return true;
+    }
+    return false;
+}
+
+function takav_order_is_cash_on_delivery_freight($order) {
+    foreach ($order->get_shipping_methods() as $line) {
+        if ($line->get_method_id() === 'takav_tipax') return true;
+    }
+    return false;
+}
+
+// "تیپاکس · پس‌کرایه" instead of "تیپاکس" / "رایگان" in the checkout, emails and wp-admin.
+add_filter('woocommerce_cart_shipping_method_full_label', function ($label, $method) {
+    return $method->get_method_id() === 'takav_tipax' ? esc_html($method->get_label()) . ' · پس‌کرایه' : $label;
+}, 10, 2);
+add_filter('woocommerce_order_shipping_to_display', function ($shipping, $order) {
+    return takav_order_is_cash_on_delivery_freight($order) ? esc_html($order->get_shipping_method()) . ' · پس‌کرایه' : $shipping;
+}, 10, 2);
+
+/** Once: make sure Iran has a delivery zone with Tipax, so the checkout works without setup. */
+function takav_seed_shipping() {
+    if (!takav_shop_ready() || get_option('takav_shipping_seeded') || !class_exists('WC_Shipping_Zones')) return;
+    $zone = WC_Shipping_Zones::get_zone_matching_package(array('destination' => array('country' => 'IR', 'state' => '', 'postcode' => '')));
+    if (!$zone || !$zone->get_id()) {
+        $zone = new WC_Shipping_Zone();
+        $zone->set_zone_name('ایران');
+        $zone->add_location('IR', 'country');
+        $zone->save();
+    }
+    $has_tipax = false;
+    foreach ($zone->get_shipping_methods() as $method) {
+        if ($method->id === 'takav_tipax') $has_tipax = true;
+    }
+    if (!$has_tipax) $zone->add_shipping_method('takav_tipax');
+    update_option('takav_shipping_seeded', 1);
+}
+
+add_action('admin_init', function () {
+    if (current_user_can('manage_woocommerce')) takav_seed_shipping();
+});
+
+// ---------------------------------------------------------------------------
+// Pre-order and the Telegram channel where production progress is posted.
+// ---------------------------------------------------------------------------
+
+function takav_preorder_days() {
+    $days = absint(get_option('takav_preorder_days', 20));
+    return $days ? $days : 20;
+}
+
+function takav_telegram_url() {
+    return esc_url_raw((string) get_option('takav_telegram_url', ''));
+}
+
+function takav_preorder_note() {
+    echo '<div class="preorder-note"><strong>پیش‌فروش</strong><p>سفارش بده؛ حدود ' . esc_html(takav_fa_digits(takav_preorder_days())) . ' روز بعد آماده می‌شود و با تیپاکس برایت ارسال می‌شود. بعد از ثبت سفارش، لینک تلگرام را می‌گیری تا مراحل آماده‌سازی را دنبال کنی.</p></div>';
+}
+
+function takav_telegram_button($class = 'telegram-link') {
+    $url = takav_telegram_url();
+    if (!$url) return;
+    echo '<a class="' . esc_attr($class) . '" href="' . esc_url($url) . '" target="_blank" rel="noopener">دنبال کردن مراحل آماده‌سازی در تلگرام <span aria-hidden="true">↗</span></a>';
+}
+
+// The Telegram link and the pre-order timing also go into the customer's order email.
+add_action('woocommerce_email_order_details', function ($order, $sent_to_admin) {
+    if ($sent_to_admin || !is_a($order, 'WC_Order')) return;
+    echo '<p>این سفارش پیش‌فروش است و حدود ' . esc_html(takav_preorder_days()) . ' روز بعد آماده و با تیپاکس (پس‌کرایه) ارسال می‌شود. کد پیگیری سفارش: <strong>' . esc_html($order->get_order_number()) . '</strong></p>';
+    $url = takav_telegram_url();
+    if ($url) echo '<p><a href="' . esc_url($url) . '">دنبال کردن مراحل آماده‌سازی در تلگرام</a></p>';
+}, 5, 2);

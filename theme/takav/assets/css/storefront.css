@@ -901,3 +901,12 @@ summary:focus-visible {
 @media(max-width:900px){.checkout-layout{grid-template-columns:1fr;gap:40px}.checkout-summary{position:static}}
 @media(max-width:600px){.checkout-page,.done-page,.track-page{padding-block:32px 80px}.checkout-page .cart-heading{padding-bottom:18px}.checkout-page .cart-heading h1{font-size:30px;margin:4px 0}.checkout-progress{margin-top:20px}.checkout-layout{margin-top:30px}.checkout-step>legend{margin-bottom:14px}.field-row,.track-form{grid-template-columns:1fr}.checkout-step>legend{font-size:22px}.checkout-progress li{font-size:11px}.done-code strong{font-size:34px}.track-result{padding:20px}.cart-row>form{grid-column:2;justify-self:start}.footer-links{gap:14px}}
 @media(prefers-reduced-motion:reduce){.done-mark circle,.done-mark path{animation:none;stroke-dashoffset:0}}
+/* Pre-order note and Telegram link */
+.preorder-note{margin-top:18px;border:1px solid var(--line);border-inline-start:2px solid var(--orange);padding:14px 16px;text-align:right}
+.preorder-note strong{display:block;font-weight:400;color:var(--orange);font-size:13px;margin-bottom:4px}
+.purchase-state .preorder-note p{margin:0;text-align:right;font-size:13px;line-height:1.9;color:var(--muted)}
+.checkout-preorder,.done-preorder{font-size:13px;color:var(--muted);border-inline-start:2px solid var(--orange);padding-inline-start:12px}
+.done-preorder{max-width:440px}
+.done-telegram{width:100%;min-height:54px;display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid var(--orange);color:var(--orange);font-size:15px}
+.done-telegram:hover{background:var(--orange);color:#15110f}
+.track-result .done-telegram{width:auto}

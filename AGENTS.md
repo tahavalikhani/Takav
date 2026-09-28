@@ -24,12 +24,16 @@ This repository is a **classic WordPress theme** (PHP templates, not a block the
 - **Search engines must be allowed.** Never add `noindex`, a `wp_robots` filter that blocks indexing, or `blog_public = 0`. (WooCommerce itself marks its cart and checkout pages `noindex`; that is expected. Leave it.)
 - **Ordering is guest-only, in short steps.** No sign-up, no account creation, no login wall. The checkout is: ۱ name + mobile (email optional) → ۲ address → ۳ delivery + payment → ۴ tick page with the tracking number. Do not turn it back into one long form, and do not add fields the owner did not ask for.
 - **Font: Peyda** (Light 300, Regular 400, Medium 500) from `theme/takav/assets/fonts/Peyda-*.ttf`, with Vazirmatn as the fallback. The Peyda files are licensed. This repository is **public**, so never commit them (they are in `.gitignore`). They are added locally only when building the ZIP for the owner.
+- **Payment is ZarinPal only** (official plugin, gateway id `WC_ZPal`). Never offer pay on delivery, bank transfer or cheque; the theme filters them out.
+- **Delivery is Tipax, paid on delivery (پس‌کرایه).** The theme's `takav_tipax` shipping method has cost 0 and is labelled «تیپاکس · پس‌کرایه»; when it is available it is the only option.
+- **Pre-order:** about 20 days (setting), progress posted on Telegram. The link and days live in wp-admin → «سفارشات» → «تنظیمات پیش‌فروش و تلگرام» (options `takav_telegram_url`, `takav_preorder_days`).
+- **wp-admin → «سفارشات»** (`inc/admin-orders.php`) is the owner's order screen. Keep its paid/unpaid filters, CSV export and status buttons working, and keep reading orders through `wc_get_orders()` (HPOS-safe).
 - **Do not change the design** (layout, colors, spacing, copy, images) unless the task explicitly asks for it. A compatibility fix must look identical before and after.
 - Persian, RTL (`lang="fa-IR" dir="rtl"`). Black with orange accents.
 
 ## 4. How ordering is built (keep it this way)
 
-- All shop code lives in `theme/takav/inc/shop.php`; templates are `page-cart.php`, `checkout.php`, `order-received.php` and `page-track.php`.
+- All shop code lives in `theme/takav/inc/shop.php` (admin screen: `inc/admin-orders.php`); templates are `page-cart.php`, `checkout.php`, `order-received.php` and `page-track.php`.
 - Orders go through **WooCommerce's own checkout** (`WC_Checkout::process_checkout`, triggered by posting `woocommerce_checkout_place_order` with the `woocommerce-process_checkout` nonce and standard `billing_*` field names). Never create orders by hand and never bypass WooCommerce's payment step: payment plugins (Zarinpal etc.), stock and emails depend on it.
 - The theme renders WooCommerce's cart and checkout pages itself (`template_include`), so it works whether those pages contain blocks or shortcodes. Leave `order-pay` to WooCommerce, and never redirect `order-received` or `order-pay`: payment gateways return there.
 - Products are matched by SKU `takav-<catalog id>` (`takav_wc_product()`). A product is only for sale when it is **published**, has a price and is in stock.

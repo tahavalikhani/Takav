@@ -5,6 +5,7 @@ defined('ABSPATH') || exit;
 require_once get_template_directory() . '/inc/catalog.php';
 require_once get_template_directory() . '/inc/routes.php';
 require_once get_template_directory() . '/inc/shop.php';
+require_once get_template_directory() . '/inc/admin-orders.php';
 
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
@@ -12,8 +13,8 @@ add_action('after_setup_theme', function () {
     add_theme_support('html5', array('search-form', 'gallery', 'caption', 'style', 'script'));
 });
 
-add_filter('language_attributes', function () {
-    return 'lang="fa-IR" dir="rtl"';
+add_filter('language_attributes', function ($output) {
+    return is_admin() ? $output : 'lang="fa-IR" dir="rtl"';
 });
 
 function takav_asset($file) {

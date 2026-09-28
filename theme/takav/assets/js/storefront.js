@@ -179,12 +179,12 @@
       return;
     }
     submit.disabled = true;
-    submit.textContent = "در حال ثبت سفارش…";
+    submit.textContent = "در حال انتقال به درگاه پرداخت…";
   });
   // Coming back from the bank with the browser's Back button restores a disabled button.
   window.addEventListener("pageshow", () => {
     submit.disabled = false;
-    submit.textContent = "ثبت سفارش";
+    submit.textContent = "ثبت سفارش و پرداخت";
   });
   // After a server-side error, open the step with the field WooCommerce flagged.
   const flagged = document.querySelector(".shop-notices [data-field]");

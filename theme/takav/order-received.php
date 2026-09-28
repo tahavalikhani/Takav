@@ -27,6 +27,7 @@ get_header(); ?>
     </div>
 <?php else : ?>
     <ol class="checkout-progress is-complete" aria-label="مراحل سفارش"><li>مشخصات</li><li>نشانی</li><li>پرداخت</li><li aria-current="step">کد پیگیری</li></ol>
+    <?php if (function_exists('wc_clear_notices') && WC()->session) wc_clear_notices(); // The tick page says it all; don't carry the gateway's message to the next page. ?>
     <div class="done-card">
         <span class="done-mark" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="m15 27 7.5 7.5L37 19"/></svg></span>
         <h1>سفارشت ثبت شد</h1>
@@ -37,6 +38,9 @@ get_header(); ?>
             <button type="button" data-copy hidden>کپی کد</button>
         </div>
         <?php if ($order->has_status(array('on-hold', 'pending'))) : ?><p class="done-status">وضعیت: <?php echo esc_html(takav_status_label($order)); ?></p><?php endif; ?>
+        <?php if ($order->get_transaction_id()) : ?><p class="done-status">کد رهگیری پرداخت: <bdi><?php echo esc_html($order->get_transaction_id()); ?></bdi></p><?php endif; ?>
+        <p class="done-preorder">پیش‌فروش: سفارشت حدود <?php echo esc_html(takav_fa_digits(takav_preorder_days())); ?> روز دیگر آماده می‌شود و با تیپاکس (پس‌کرایه) ارسال می‌شود.</p>
+        <?php takav_telegram_button('done-telegram'); ?>
         <div class="done-gateway"><?php do_action('woocommerce_thankyou_' . $order->get_payment_method(), $order->get_id()); do_action('woocommerce_thankyou', $order->get_id()); ?></div>
         <a class="done-primary" href="<?php echo esc_url(add_query_arg('order', $order->get_order_number(), takav_view_url('track'))); ?>">پیگیری سفارش</a>
         <a class="done-secondary" href="<?php echo esc_url(home_url('/')); ?>">بازگشت به فروشگاه</a>
@@ -50,7 +54,7 @@ get_header(); ?>
         </ul>
         <dl>
             <?php if ((float) $order->get_total_discount() > 0) : ?><div><dt>تخفیف</dt><dd>−<?php echo wp_kses_post(wc_price($order->get_total_discount(), array('currency' => $order->get_currency()))); ?></dd></div><?php endif; ?>
-            <?php if ($order->get_shipping_method()) : ?><div><dt>ارسال</dt><dd><?php echo esc_html($order->get_shipping_method()); ?> · <?php echo wp_kses_post(wc_price($order->get_shipping_total(), array('currency' => $order->get_currency()))); ?></dd></div><?php endif; ?>
+            <?php if ($order->get_shipping_method()) : ?><div><dt>ارسال</dt><dd><?php echo esc_html($order->get_shipping_method()); ?> · <?php echo takav_order_is_cash_on_delivery_freight($order) ? 'پس‌کرایه' : wp_kses_post(wc_price($order->get_shipping_total(), array('currency' => $order->get_currency()))); ?></dd></div><?php endif; ?>
             <?php if ($order->get_payment_method_title()) : ?><div><dt>روش پرداخت</dt><dd><?php echo esc_html($order->get_payment_method_title()); ?></dd></div><?php endif; ?>
             <div><dt>مبلغ کل</dt><dd><?php echo wp_kses_post($order->get_formatted_order_total()); ?></dd></div>
         </dl>
