@@ -1,7 +1,7 @@
 <?php
 /**
  * Store pages the payment gateway and eNamad look for: about, contact and terms.
- * Contact details come from wp-admin → «سفارشات» → «تنظیمات فروشگاه»; nothing is invented here.
+ * Contact details (phone, Instagram, optional email and hours) come from the owner; edited in wp-admin → «سفارشات» → «تنظیمات فروشگاه».
  * A real WordPress page with the same slug (about, contact, terms) replaces the theme's version.
  */
 defined('ABSPATH') || exit;
@@ -12,9 +12,11 @@ function takav_info_pages() {
 
 /** Owner-entered contact details; empty values are simply not shown. */
 function takav_contact() {
+    // Takav is online-only: no shop address. Phone and Instagram are the owner's, used until changed in wp-admin.
+    $defaults = array('phone' => '09390709672', 'email' => '', 'hours' => '', 'instagram' => 'https://www.instagram.com/takavbrand');
     $contact = array();
-    foreach (array('phone', 'email', 'address', 'postcode', 'hours', 'instagram') as $key) {
-        $contact[$key] = trim((string) get_option('takav_contact_' . $key, ''));
+    foreach ($defaults as $key => $default) {
+        $contact[$key] = trim((string) get_option('takav_contact_' . $key, $default));
     }
     $contact['telegram'] = takav_telegram_url();
     return $contact;

@@ -75,7 +75,11 @@ const output =
     assert.equal(await page.locator(`.footer-links a[href$="/${slug}/"]`).count(), 1);
   }
   await page.goto(`${base}/contact/`);
-  assert.match(await page.locator(".contact-list").innerText(), /09120000000/);
+  assert.match(await page.locator(".contact-list").innerText(), /09390709672/);
+  assert.equal(await page.locator('.contact-list a[href="https://www.instagram.com/takavbrand"]').count(), 1);
+  assert.doesNotMatch(await page.locator(".info-body").innerText(), /نشانی|کد پستی/, "Online-only: no shop address");
+  await page.goto(`${base}/terms/`);
+  assert.doesNotMatch(await page.locator(".info-body").innerText(), /بازگشت کالا|حریم خصوصی/, "No policies the owner did not write");
   assert.equal(
     await page.locator(".enamad-seal").innerHTML(),
     `<a referrerpolicy="origin" target="_blank" href="https://trustseal.enamad.ir/?id=7907429&amp;Code=wI8JHYPsuvlfhEP4Ns7dNggrp8bMYQIZ"><img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=7907429&amp;Code=wI8JHYPsuvlfhEP4Ns7dNggrp8bMYQIZ" alt="" style="cursor:pointer" code="wI8JHYPsuvlfhEP4Ns7dNggrp8bMYQIZ"></a>`,

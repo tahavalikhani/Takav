@@ -6,7 +6,7 @@ $pages = takav_info_pages();
 if (!isset($pages[$view])) { get_template_part('404'); return; }
 $contact = takav_contact();
 $days = takav_fa_digits(takav_preorder_days());
-$has_contact = $contact['phone'] || $contact['email'] || $contact['address'];
+$has_contact = $contact['phone'] || $contact['email'];
 get_header(); ?>
 <main id="main" class="info-page wrap">
     <div class="cart-heading"><p><bdi>TAKAV / <?php echo esc_html(strtoupper($view)); ?></bdi></p><h1><?php echo esc_html($pages[$view]); ?></h1></div>
@@ -22,7 +22,6 @@ get_header(); ?>
         <dl class="contact-list">
             <?php if ($contact['phone']) : ?><div><dt>تلفن</dt><dd><a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', takav_en_digits($contact['phone']))); ?>"><bdi><?php echo esc_html($contact['phone']); ?></bdi></a></dd></div><?php endif; ?>
             <?php if ($contact['email']) : ?><div><dt>ایمیل</dt><dd><a href="mailto:<?php echo esc_attr($contact['email']); ?>"><bdi><?php echo esc_html($contact['email']); ?></bdi></a></dd></div><?php endif; ?>
-            <?php if ($contact['address']) : ?><div><dt>نشانی</dt><dd><?php echo esc_html($contact['address']); ?><?php if ($contact['postcode']) echo '<br>کد پستی: <bdi>' . esc_html($contact['postcode']) . '</bdi>'; ?></dd></div><?php endif; ?>
             <?php if ($contact['hours']) : ?><div><dt>ساعت پاسخ‌گویی</dt><dd><?php echo esc_html($contact['hours']); ?></dd></div><?php endif; ?>
             <?php if ($contact['instagram']) : ?><div><dt>اینستاگرام</dt><dd><a href="<?php echo esc_url($contact['instagram']); ?>" target="_blank" rel="noopener"><bdi><?php echo esc_html(preg_replace('#^https?://(www\.)?#', '', untrailingslashit($contact['instagram']))); ?></bdi></a></dd></div><?php endif; ?>
             <?php if ($contact['telegram']) : ?><div><dt>تلگرام</dt><dd><a href="<?php echo esc_url($contact['telegram']); ?>" target="_blank" rel="noopener"><bdi><?php echo esc_html(preg_replace('#^https?://#', '', untrailingslashit($contact['telegram']))); ?></bdi></a></dd></div><?php endif; ?>
@@ -43,11 +42,7 @@ get_header(); ?>
         <p>سفارش‌ها با تیپاکس به سراسر ایران ارسال می‌شوند. هزینهٔ ارسال پس‌کرایه است، یعنی هنگام تحویل مستقیماً به تیپاکس پرداخت می‌شود و در مبلغ سفارش حساب نمی‌شود.</p>
         <h2>۵. پیگیری سفارش</h2>
         <p>بعد از پرداخت یک کد پیگیری می‌گیری. با این کد و شماره موبایلی که هنگام خرید وارد کردی، وضعیت سفارش را در <a href="<?php echo esc_url(takav_view_url('track')); ?>">صفحهٔ پیگیری سفارش</a> می‌بینی.</p>
-        <h2>۶. بازگشت کالا</h2>
-        <p>طبق قانون تجارت الکترونیکی، تا ۷ روز کاری پس از تحویل می‌توانی از خرید انصراف دهی؛ کالا باید سالم، استفاده‌نشده و با بسته‌بندی اولیه برگردانده شود. برای بازگشت کالا ابتدا از راه‌های <a href="<?php echo esc_url(takav_info_url('contact')); ?>">تماس با ما</a> هماهنگ کن. هزینهٔ ارسال برگشت با خریدار است.</p>
-        <h2>۷. حریم خصوصی</h2>
-        <p>نام، شماره موبایل، ایمیل و نشانی تو فقط برای ثبت، ارسال و پیگیری سفارش استفاده می‌شود و فقط در همین حد در اختیار تیپاکس (برای ارسال) و زرین‌پال (برای پرداخت) قرار می‌گیرد. اطلاعات کارت بانکی در درگاه بانک وارد می‌شود و به تکاو نمی‌رسد. اطلاعاتت را به هیچ شخص یا شرکت دیگری نمی‌دهیم.</p>
-        <h2>۸. ارتباط با ما</h2>
+        <h2>۶. ارتباط با ما</h2>
         <p>برای هر سؤال یا مشکلی از راه‌های <a href="<?php echo esc_url(takav_info_url('contact')); ?>">تماس با ما</a> در ارتباط باش.</p>
     <?php endif; ?>
     </div>

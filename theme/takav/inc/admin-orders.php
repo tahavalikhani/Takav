@@ -250,10 +250,8 @@ function takav_admin_settings_tab() {
     echo '<table class="form-table" role="presentation"><tbody>';
     $contact = takav_contact();
     $fields = array(
-        'phone' => array('تلفن', 'text', 'ltr', '021-12345678'),
+        'phone' => array('تلفن', 'text', 'ltr', '09390709672'),
         'email' => array('ایمیل', 'email', 'ltr', 'info@takav.shop'),
-        'address' => array('نشانی', 'textarea', '', ''),
-        'postcode' => array('کد پستی', 'text', 'ltr', ''),
         'hours' => array('ساعت پاسخ‌گویی', 'text', '', 'شنبه تا چهارشنبه، ۱۰ تا ۱۸'),
         'instagram' => array('لینک اینستاگرام', 'url', 'ltr', 'https://instagram.com/...'),
     );
@@ -279,11 +277,10 @@ add_action('admin_post_takav_preorder_settings', function () {
     update_option('takav_telegram_url', $url);
     $days = isset($_POST['takav_preorder_days']) ? absint($_POST['takav_preorder_days']) : 20;
     update_option('takav_preorder_days', max(1, min(120, $days)));
-    foreach (array('phone', 'email', 'address', 'postcode', 'hours', 'instagram') as $key) {
+    foreach (array('phone', 'email', 'hours', 'instagram') as $key) {
         $raw = isset($_POST['takav_contact_' . $key]) ? wp_unslash($_POST['takav_contact_' . $key]) : '';
         if ($key === 'email') $value = sanitize_email($raw);
         elseif ($key === 'instagram') $value = esc_url_raw(trim($raw), array('https', 'http'));
-        elseif ($key === 'address') $value = sanitize_textarea_field($raw);
         else $value = sanitize_text_field($raw);
         update_option('takav_contact_' . $key, $value);
     }
