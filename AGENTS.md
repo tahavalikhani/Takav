@@ -28,6 +28,8 @@ This repository is a **classic WordPress theme** (PHP templates, not a block the
 - **Delivery is Tipax, paid on delivery (پس‌کرایه).** The theme's `takav_tipax` shipping method has cost 0 and is labelled «تیپاکس · پس‌کرایه»; when it is available it is the only option.
 - **Pre-order:** about 20 days (setting), progress posted on Telegram. The link and days live in wp-admin → «سفارشات» → «تنظیمات پیش‌فروش و تلگرام» (options `takav_telegram_url`, `takav_preorder_days`).
 - **wp-admin → «سفارشات»** (`inc/admin-orders.php`) is the owner's order screen. Keep its paid/unpaid filters, CSV export and status buttons working, and keep reading orders through `wc_get_orders()` (HPOS-safe).
+- **eNamad seal** (`takav_enamad_seal()` in `inc/pages.php`) is printed in the footer exactly as eNamad issued it. Never edit, reformat, escape, re-quote, lazy-load, self-host or move that markup into editor content: eNamad treats changes as tampering. Keep `referrerpolicy='origin'` and the `code` attribute. Tests skip it in axe and the broken-image check because trustseal.enamad.ir is unreachable from outside Iran.
+- **Store pages** `/about/`, `/contact/`, `/terms/` (`info-page.php`) are required by ZarinPal and eNamad. Contact details come only from the owner's settings (`takav_contact_*` options); never invent phone numbers, addresses or policies. A real WordPress page with the same slug wins.
 - **Do not change the design** (layout, colors, spacing, copy, images) unless the task explicitly asks for it. A compatibility fix must look identical before and after.
 - Persian, RTL (`lang="fa-IR" dir="rtl"`). Black with orange accents.
 
@@ -57,7 +59,7 @@ This repository is a **classic WordPress theme** (PHP templates, not a block the
 
 1. `php -l` on every changed PHP file.
 2. `unzip -l dist/takav.zip | head` shows `takav/style.css` near the top.
-3. Install the ZIP on a real WordPress (the WordPress Playground CLI in `devDependencies` works) using the normal theme upload. Then check `/`, `/collection/hoodie/`, `/collection/pants/`, `/collection-one/`, `/cart/` and `/track/`. Test with Settings → Reading on "Your latest posts" **and** on "A static page" with no homepage chosen. No "Hello world!", no PHP errors, no `noindex`.
+3. Install the ZIP on a real WordPress (the WordPress Playground CLI in `devDependencies` works) using the normal theme upload. Then check `/`, `/collection/hoodie/`, `/collection/pants/`, `/collection-one/`, `/cart/`, `/track/`, `/about/`, `/contact/` and `/terms/`. Test with Settings → Reading on "Your latest posts" **and** on "A static page" with no homepage chosen. No "Hello world!", no PHP errors, no `noindex`.
 4. Run `corepack pnpm preview` and `corepack pnpm test`. Both must pass. The test places real guest orders (with and without JavaScript) on a WooCommerce test store and checks the tick page and the tracking page.
 5. Also check: a product with sizes, a failed payment page, and the whole site with WooCommerce **deactivated** (no PHP errors).
 6. Report honestly what you tested and what you could not test.

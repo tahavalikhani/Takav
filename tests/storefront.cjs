@@ -20,9 +20,10 @@ const output =
     external = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
-    // ZarinPal's plugin loads its own trust badge on the payment step; everything else must be local.
+    // ZarinPal's plugin loads its own trust badge on the payment step and the eNamad seal loads from eNamad
+    // (it must not be self-hosted); everything else must be local.
     const host = request.url().startsWith("http") ? new URL(request.url()).hostname : "";
-    if (!request.url().startsWith(base) && !request.url().startsWith("data:") && !/(^|\.)zarinpal\.com$/.test(host))
+    if (!request.url().startsWith(base) && !request.url().startsWith("data:") && !/(^|\.)(zarinpal\.com|trustseal\.enamad\.ir)$/.test(host))
       external.push(request.url());
   });
   await fs.mkdir(output, { recursive: true });
@@ -67,6 +68,19 @@ const output =
   assert.equal(await page.locator(".campaign-piece").count(), 2);
   await page.locator(".campaign-piece").first().click();
   assert.equal(await page.locator("h1").innerText(), "هودی تکاو");
+  // Store pages for the payment gateway and eNamad, and the seal exactly as issued.
+  for (const [slug, title] of [["about", "درباره ما"], ["contact", "تماس با ما"], ["terms", "قوانین و مقررات"]]) {
+    assert.equal((await page.goto(`${base}/${slug}/`)).status(), 200);
+    assert.equal(await page.locator("h1").innerText(), title);
+    assert.equal(await page.locator(`.footer-links a[href$="/${slug}/"]`).count(), 1);
+  }
+  await page.goto(`${base}/contact/`);
+  assert.match(await page.locator(".contact-list").innerText(), /09120000000/);
+  assert.equal(
+    await page.locator(".enamad-seal").innerHTML(),
+    `<a referrerpolicy="origin" target="_blank" href="https://trustseal.enamad.ir/?id=7907429&amp;Code=wI8JHYPsuvlfhEP4Ns7dNggrp8bMYQIZ"><img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=7907429&amp;Code=wI8JHYPsuvlfhEP4Ns7dNggrp8bMYQIZ" alt="" style="cursor:pointer" code="wI8JHYPsuvlfhEP4Ns7dNggrp8bMYQIZ"></a>`,
+  );
+  await page.goto(hoodie, { waitUntil: "networkidle" });
   // Guest order: product → cart → three short steps → tick with tracking number → tracking page.
   assert.match(await page.locator(".preorder-note").innerText(), /پیش‌فروش[\s\S]*۲۰ روز[\s\S]*تلگرام/);
   await page.locator(".add-form button").click();
@@ -135,7 +149,7 @@ const output =
   assert.match(await page.locator(".track-result h2").innerText(), new RegExp(trackingCode));
   assert.match(await page.locator(".track-status").innerText(), /.+/);
   await page.screenshot({ path: path.join(output, "order-6-track.png"), fullPage: true });
-  for (const url of [base, hoodie, pants, `${base}/collection-one/`, `${base}/cart/`]) {
+  for (const url of [base, hoodie, pants, `${base}/collection-one/`, `${base}/cart/`, `${base}/about/`, `${base}/contact/`, `${base}/terms/`]) {
     await page.goto(url, { waitUntil: "networkidle" });
     assert.equal(await page.locator("html").getAttribute("dir"), "rtl");
     // WooCommerce keeps its cart out of search results; every other page must be indexable.
@@ -158,7 +172,8 @@ const output =
     const violations = await page.evaluate(
       async () =>
         (
-          await axe.run(document, {
+          // The eNamad seal must stay exactly as issued (a link with an unlabeled image), so axe skips it.
+          await axe.run({ exclude: [".enamad-seal"] }, {
             runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
           })
         ).violations,
@@ -172,7 +187,8 @@ const output =
         .locator("img")
         .evaluateAll((images) =>
           images
-            .filter((i) => i.loading !== "lazy" && !i.naturalWidth)
+            // The eNamad seal loads from trustseal.enamad.ir, which is unreachable from outside Iran.
+            .filter((i) => i.loading !== "lazy" && !i.naturalWidth && !i.closest(".enamad-seal"))
             .map((i) => i.src),
         ),
       [],

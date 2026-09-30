@@ -117,7 +117,7 @@ function takav_admin_orders_page() {
     $tab = isset($_GET['tab']) && $_GET['tab'] === 'settings' ? 'settings' : 'orders';
     $page_url = admin_url('admin.php?page=takav-orders');
     echo '<div class="wrap takav-orders"><h1 class="wp-heading-inline">سفارشات</h1>';
-    echo '<nav class="nav-tab-wrapper"><a class="nav-tab' . ($tab === 'orders' ? ' nav-tab-active' : '') . '" href="' . esc_url($page_url) . '">سفارش‌ها</a><a class="nav-tab' . ($tab === 'settings' ? ' nav-tab-active' : '') . '" href="' . esc_url(add_query_arg('tab', 'settings', $page_url)) . '">تنظیمات پیش‌فروش و تلگرام</a></nav>';
+    echo '<nav class="nav-tab-wrapper"><a class="nav-tab' . ($tab === 'orders' ? ' nav-tab-active' : '') . '" href="' . esc_url($page_url) . '">سفارش‌ها</a><a class="nav-tab' . ($tab === 'settings' ? ' nav-tab-active' : '') . '" href="' . esc_url(add_query_arg('tab', 'settings', $page_url)) . '">تنظیمات فروشگاه</a></nav>';
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended
     if (isset($_GET['takav_done'])) echo '<div class="notice notice-success is-dismissible"><p>ذخیره شد.</p></div>';
     $tab === 'settings' ? takav_admin_settings_tab() : takav_admin_orders_tab($page_url);
@@ -245,7 +245,29 @@ function takav_admin_settings_tab() {
     echo '<table class="form-table" role="presentation"><tbody>';
     echo '<tr><th scope="row"><label for="takav_telegram_url">لینک تلگرام</label></th><td><input id="takav_telegram_url" name="takav_telegram_url" type="url" class="regular-text ltr" placeholder="https://t.me/..." value="' . esc_attr(takav_telegram_url()) . '"><p class="description">بعد از ثبت سفارش، در صفحهٔ پایان خرید، صفحهٔ پیگیری و ایمیل سفارش به مشتری نشان داده می‌شود. خالی بگذاری، دکمه نمایش داده نمی‌شود.</p></td></tr>';
     echo '<tr><th scope="row"><label for="takav_preorder_days">زمان آماده‌سازی (روز)</label></th><td><input id="takav_preorder_days" name="takav_preorder_days" type="number" min="1" max="120" class="small-text" value="' . esc_attr(takav_preorder_days()) . '"><p class="description">در صفحهٔ محصول، سبد، پرداخت و پیگیری نوشته می‌شود: «حدود … روز».</p></td></tr>';
-    echo '</tbody></table></div>';
+    echo '</tbody></table>';
+    echo '<h2>اطلاعات تماس</h2><p class="description">در صفحهٔ «تماس با ما» نشان داده می‌شود. هر خانه‌ای را خالی بگذاری، نمایش داده نمی‌شود.</p>';
+    echo '<table class="form-table" role="presentation"><tbody>';
+    $contact = takav_contact();
+    $fields = array(
+        'phone' => array('تلفن', 'text', 'ltr', '021-12345678'),
+        'email' => array('ایمیل', 'email', 'ltr', 'info@takav.shop'),
+        'address' => array('نشانی', 'textarea', '', ''),
+        'postcode' => array('کد پستی', 'text', 'ltr', ''),
+        'hours' => array('ساعت پاسخ‌گویی', 'text', '', 'شنبه تا چهارشنبه، ۱۰ تا ۱۸'),
+        'instagram' => array('لینک اینستاگرام', 'url', 'ltr', 'https://instagram.com/...'),
+    );
+    foreach ($fields as $key => $field) {
+        $id = 'takav_contact_' . $key;
+        echo '<tr><th scope="row"><label for="' . esc_attr($id) . '">' . esc_html($field[0]) . '</label></th><td>';
+        if ($field[1] === 'textarea') {
+            echo '<textarea id="' . esc_attr($id) . '" name="' . esc_attr($id) . '" rows="3" class="large-text">' . esc_textarea($contact[$key]) . '</textarea>';
+        } else {
+            echo '<input id="' . esc_attr($id) . '" name="' . esc_attr($id) . '" type="' . esc_attr($field[1]) . '" class="regular-text' . ($field[2] ? ' ' . esc_attr($field[2]) : '') . '" placeholder="' . esc_attr($field[3]) . '" value="' . esc_attr($contact[$key]) . '">';
+        }
+        echo '</td></tr>';
+    }
+    echo '</tbody></table>';
     submit_button('ذخیره');
     echo '</form>';
 }
@@ -257,6 +279,14 @@ add_action('admin_post_takav_preorder_settings', function () {
     update_option('takav_telegram_url', $url);
     $days = isset($_POST['takav_preorder_days']) ? absint($_POST['takav_preorder_days']) : 20;
     update_option('takav_preorder_days', max(1, min(120, $days)));
+    foreach (array('phone', 'email', 'address', 'postcode', 'hours', 'instagram') as $key) {
+        $raw = isset($_POST['takav_contact_' . $key]) ? wp_unslash($_POST['takav_contact_' . $key]) : '';
+        if ($key === 'email') $value = sanitize_email($raw);
+        elseif ($key === 'instagram') $value = esc_url_raw(trim($raw), array('https', 'http'));
+        elseif ($key === 'address') $value = sanitize_textarea_field($raw);
+        else $value = sanitize_text_field($raw);
+        update_option('takav_contact_' . $key, $value);
+    }
     wp_safe_redirect(admin_url('admin.php?page=takav-orders&tab=settings&takav_done=1'));
     exit;
 });

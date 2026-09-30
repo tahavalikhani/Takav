@@ -15,6 +15,11 @@ add_action('parse_request', function ($request) {
         $request->query_vars = array('takav_view' => $path);
         return;
     }
+    // About, contact and terms: the owner's own WordPress page wins when one exists.
+    if (in_array($path, array('about', 'contact', 'terms'), true)) {
+        if (!takav_info_page_exists($path)) $request->query_vars = array('takav_view' => $path);
+        return;
+    }
     // /cart/ and /checkout/ open WooCommerce's own pages, whatever their slug; without WooCommerce, the theme's cart.
     if ($path === 'cart' || $path === 'checkout') {
         $page = function_exists('wc_get_page_id') ? wc_get_page_id($path) : 0;
@@ -31,7 +36,7 @@ add_action('parse_request', function ($request) {
 });
 
 function takav_views() {
-    return array('collection-one', 'cart', 'track');
+    return array('collection-one', 'cart', 'track', 'about', 'contact', 'terms');
 }
 
 function takav_view_url($view) {
@@ -81,6 +86,7 @@ add_action('template_redirect', function () {
 
 add_filter('template_include', function ($template) {
     $view = get_query_var('takav_view', '');
+    if (isset(takav_info_pages()[$view])) return get_template_directory() . '/info-page.php';
     if (in_array($view, takav_views(), true)) return get_template_directory() . '/page-' . $view . '.php';
     if ($view !== '') return get_template_directory() . '/404.php';
     if (takav_current_product_id()) return get_template_directory() . '/single-takav.php';

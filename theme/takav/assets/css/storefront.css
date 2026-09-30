@@ -910,3 +910,17 @@ summary:focus-visible {
 .done-telegram{width:100%;min-height:54px;display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid var(--orange);color:var(--orange);font-size:15px}
 .done-telegram:hover{background:var(--orange);color:#15110f}
 .track-result .done-telegram{width:auto}
+/* Info pages (about, contact, terms) and the eNamad seal */
+.info-page{padding-block:60px 110px;max-width:760px}
+.info-body{margin-top:34px;display:grid;gap:16px}
+.info-body h2{font-size:19px;margin-top:18px}
+.info-body p{color:var(--muted);font-size:15px;line-height:2.1}
+.info-body a{color:var(--orange);border-bottom:1px solid currentColor}
+.contact-list{margin:0;display:grid;gap:0}
+.contact-list div{display:grid;grid-template-columns:150px 1fr;gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
+.contact-list dt{color:var(--muted);font-size:13px}.contact-list dd{margin:0}
+.checkout-terms{font-size:12px;color:var(--muted)}.checkout-terms a{color:var(--orange);border-bottom:1px solid currentColor}
+.site-footer{flex-wrap:wrap}
+.footer-links{flex-wrap:wrap}
+.enamad-seal{flex-basis:100%;display:flex;justify-content:flex-start}
+@media(max-width:600px){.info-page{padding-block:40px 80px}.contact-list div{grid-template-columns:1fr;gap:4px}}
