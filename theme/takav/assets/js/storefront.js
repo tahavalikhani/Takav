@@ -209,3 +209,70 @@
     }
   });
 })();
+
+// First-purchase discount popup: shown once, about 3 seconds after a first visit.
+(() => {
+  "use strict";
+  const popup = document.querySelector(".discount-popup");
+  if (!popup) return;
+  const key = "takav-first-discount";
+  const seen = () => {
+    try {
+      if (localStorage.getItem(key)) return true;
+    } catch (_) {}
+    return document.cookie.includes(`${key}=`);
+  };
+  const remember = (value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (_) {}
+    document.cookie = `${key}=${value}; max-age=${60 * 60 * 24 * 365}; path=/; SameSite=Lax`;
+  };
+  if (seen()) return;
+  const apply = popup.querySelector("[data-discount-apply]");
+  const decline = popup.querySelector("[data-discount-decline]");
+  const status = popup.querySelector(".discount-status");
+  let previous = null;
+  function close() {
+    popup.hidden = true;
+    document.removeEventListener("keydown", onKey);
+    previous?.focus?.();
+  }
+  function onKey(event) {
+    if (event.key === "Escape") {
+      remember("declined");
+      close();
+    }
+    if (event.key === "Tab") {
+      // Keep focus on the two buttons while the popup is open.
+      event.preventDefault();
+      (document.activeElement === apply ? decline : apply).focus();
+    }
+  }
+  function open() {
+    if (seen()) return;
+    previous = document.activeElement;
+    popup.hidden = false;
+    popup.querySelector("#discount-title").focus();
+    document.addEventListener("keydown", onKey);
+  }
+  setTimeout(open, 3000);
+  decline.addEventListener("click", () => {
+    remember("declined");
+    close();
+  });
+  apply.addEventListener("click", async () => {
+    apply.disabled = decline.disabled = true;
+    try {
+      const response = await fetch(popup.dataset.discountUrl, { method: "POST", credentials: "same-origin" });
+      const result = await response.json();
+      if (!result.success) throw new Error("rejected");
+      remember("applied");
+      status.textContent = "تخفیف روی همهٔ محصولات اعمال شد.";
+      setTimeout(() => location.reload(), 900);
+    } catch (_) {
+      status.textContent = "تخفیف اعمال نشد. دوباره امتحان کن.";
+      apply.disabled = decline.disabled = false;
+    }
+  });
+})();

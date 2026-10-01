@@ -177,7 +177,7 @@ function takav_admin_orders_tab($page_url) {
         echo '<td>' . esc_html($date ? $date->date_i18n('Y-m-d H:i') : '') . '</td>';
         echo '<td>' . esc_html($order->get_billing_first_name()) . '<br><a class="ltr" href="tel:' . esc_attr($order->get_billing_phone()) . '">' . esc_html($order->get_billing_phone()) . '</a>' . ($order->get_billing_email() ? '<br><span class="muted ltr">' . esc_html($order->get_billing_email()) . '</span>' : '') . '</td>';
         echo '<td>' . implode('<br>', array_map('esc_html', takav_admin_items($order))) . '</td>';
-        echo '<td>' . wp_kses_post($order->get_formatted_order_total()) . '</td>';
+        echo '<td>' . wp_kses_post($order->get_formatted_order_total()) . ($order->get_meta('_takav_first_discount') ? '<br><span class="muted">تخفیف اولین خرید ' . esc_html($order->get_meta('_takav_first_discount')) . '٪</span>' : '') . '</td>';
         echo '<td><span class="badge ' . esc_attr($pay_class) . '">' . esc_html($pay_label) . '</span>' . ($order->get_payment_method_title() ? '<br><span class="muted">' . esc_html($order->get_payment_method_title()) . '</span>' : '') . ($order->get_transaction_id() ? '<br><span class="muted">کد رهگیری: <span class="ltr">' . esc_html($order->get_transaction_id()) . '</span></span>' : '') . '</td>';
         echo '<td>' . esc_html(takav_status_label($order)) . '</td>';
         echo '<td>' . esc_html(takav_admin_address($order)) . ($order->get_billing_postcode() ? '<br><span class="muted">کد پستی: ' . esc_html($order->get_billing_postcode()) . '</span>' : '') . ($order->get_customer_note() ? '<br><span class="muted">یادداشت: ' . esc_html($order->get_customer_note()) . '</span>' : '') . '</td>';
@@ -223,7 +223,7 @@ add_action('admin_post_takav_orders_csv', function () {
     header('Content-Disposition: attachment; filename="takav-orders-' . gmdate('Y-m-d') . '.csv"');
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF"); // Lets Excel read Persian text.
-    takav_csv_row($out, array('شماره', 'تاریخ', 'نام', 'موبایل', 'ایمیل', 'محصولات', 'مبلغ', 'ارز', 'پرداخت', 'روش پرداخت', 'کد رهگیری پرداخت', 'وضعیت', 'استان', 'شهر', 'نشانی', 'کد پستی'));
+    takav_csv_row($out, array('شماره', 'تاریخ', 'نام', 'موبایل', 'ایمیل', 'محصولات', 'مبلغ', 'ارز', 'پرداخت', 'روش پرداخت', 'کد رهگیری پرداخت', 'تخفیف اولین خرید (٪)', 'وضعیت', 'استان', 'شهر', 'نشانی', 'کد پستی'));
     $states = takav_provinces();
     foreach (takav_admin_orders() as $order) {
         $date = $order->get_date_created();
@@ -231,7 +231,7 @@ add_action('admin_post_takav_orders_csv', function () {
         list($pay_label) = takav_admin_payment_state($order);
         takav_csv_row($out, array(
             $order->get_order_number(), $date ? $date->date_i18n('Y-m-d H:i') : '', $order->get_billing_first_name(), $order->get_billing_phone(), $order->get_billing_email(),
-            implode(' | ', takav_admin_items($order)), $order->get_total(), $order->get_currency(), $pay_label, $order->get_payment_method_title(), $order->get_transaction_id(),
+            implode(' | ', takav_admin_items($order)), $order->get_total(), $order->get_currency(), $pay_label, $order->get_payment_method_title(), $order->get_transaction_id(), $order->get_meta('_takav_first_discount'),
             takav_status_label($order), isset($states[$state]) ? $states[$state] : $state, $order->get_billing_city(), $order->get_billing_address_1(), $order->get_billing_postcode(),
         ));
     }
@@ -245,6 +245,11 @@ function takav_admin_settings_tab() {
     echo '<table class="form-table" role="presentation"><tbody>';
     echo '<tr><th scope="row"><label for="takav_telegram_url">لینک تلگرام</label></th><td><input id="takav_telegram_url" name="takav_telegram_url" type="url" class="regular-text ltr" placeholder="https://t.me/..." value="' . esc_attr(takav_telegram_url()) . '"><p class="description">بعد از ثبت سفارش، در صفحهٔ پایان خرید، صفحهٔ پیگیری و ایمیل سفارش به مشتری نشان داده می‌شود. خالی بگذاری، دکمه نمایش داده نمی‌شود.</p></td></tr>';
     echo '<tr><th scope="row"><label for="takav_preorder_days">زمان آماده‌سازی (روز)</label></th><td><input id="takav_preorder_days" name="takav_preorder_days" type="number" min="1" max="120" class="small-text" value="' . esc_attr(takav_preorder_days()) . '"><p class="description">در صفحهٔ محصول، سبد، پرداخت و پیگیری نوشته می‌شود: «حدود … روز».</p></td></tr>';
+    echo '</tbody></table>';
+    echo '<h2>تخفیف اولین خرید</h2><p class="description">چند ثانیه بعد از ورود، یک پنجره به بازدیدکننده تخفیف می‌دهد. با «اعمال کن» قیمت همهٔ محصولات برایش کم می‌شود. هر شماره موبایل فقط یک بار.</p>';
+    echo '<table class="form-table" role="presentation"><tbody>';
+    echo '<tr><th scope="row">نمایش پنجرهٔ تخفیف</th><td><label><input type="checkbox" name="takav_first_discount_enabled" value="yes"' . checked(get_option('takav_first_discount_enabled', 'yes'), 'yes', false) . '> فعال</label></td></tr>';
+    echo '<tr><th scope="row"><label for="takav_first_discount_percent">درصد تخفیف</label></th><td><input id="takav_first_discount_percent" name="takav_first_discount_percent" type="number" min="1" max="90" class="small-text" value="' . esc_attr(max(1, takav_first_discount_percent())) . '"> ٪</td></tr>';
     echo '</tbody></table>';
     echo '<h2>اطلاعات تماس</h2><p class="description">در صفحهٔ «تماس با ما» نشان داده می‌شود. هر خانه‌ای را خالی بگذاری، نمایش داده نمی‌شود.</p>';
     echo '<table class="form-table" role="presentation"><tbody>';
@@ -277,6 +282,9 @@ add_action('admin_post_takav_preorder_settings', function () {
     update_option('takav_telegram_url', $url);
     $days = isset($_POST['takav_preorder_days']) ? absint($_POST['takav_preorder_days']) : 20;
     update_option('takav_preorder_days', max(1, min(120, $days)));
+    update_option('takav_first_discount_enabled', isset($_POST['takav_first_discount_enabled']) ? 'yes' : 'no');
+    $percent = isset($_POST['takav_first_discount_percent']) ? absint($_POST['takav_first_discount_percent']) : 5;
+    update_option('takav_first_discount_percent', max(1, min(90, $percent)));
     foreach (array('phone', 'email', 'hours', 'instagram') as $key) {
         $raw = isset($_POST['takav_contact_' . $key]) ? wp_unslash($_POST['takav_contact_' . $key]) : '';
         if ($key === 'email') $value = sanitize_email($raw);

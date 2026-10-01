@@ -15,6 +15,12 @@ const output =
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
   });
+  // The first-purchase popup has its own test below; the main walk-through starts with it already answered.
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem("takav-first-discount", "declined");
+    } catch (_) {}
+  });
   const page = await context.newPage();
   const errors = [],
     external = [];
@@ -237,6 +243,77 @@ const output =
     assert.equal(await page.locator("h1").innerText(), "هودی تکاو");
     assert.equal((await page.goto(`${base}/?p=999999`)).status(), 404);
     assert.equal((await page.goto(`${base}/?p=1`)).status(), 200);
+  }
+  if (!process.env.TAKAV_STATIC) {
+    // First-purchase popup: shows after a few seconds, «اعمال کن» takes 5% off every product.
+    const offer = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+    offer.on("pageerror", (error) => errors.push(error.message));
+    await offer.goto(base, { waitUntil: "networkidle" });
+    assert.equal(await offer.locator(".discount-popup").isVisible(), false, "Not straight away");
+    await offer.locator(".discount-popup").waitFor({ state: "visible", timeout: 6000 });
+    assert.match(await offer.locator("#discount-title").innerText(), /تخفیف ۵٪ برای اولین خرید/);
+    assert.equal(await offer.locator(".discount-buttons button").count(), 2);
+    await offer.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+    assert.deepEqual(
+      (await offer.evaluate(async () => (await axe.run({ include: [".discount-popup"] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] } })).violations)).map((v) => v.id),
+      [],
+    );
+    await Promise.all([offer.waitForNavigation(), offer.locator("[data-discount-apply]").click()]);
+    assert.equal(await offer.locator(".discount-popup").count(), 0, "Gone once applied");
+    assert.match(await offer.locator(".card-price").first().innerText(), /۲,۲۸۰,۰۰۰/);
+    assert.match(await offer.locator(".card-price del").first().innerText(), /۲,۴۰۰,۰۰۰/);
+    await offer.goto(hoodie);
+    await Promise.all([offer.waitForURL(/\/cart\//), offer.locator(".add-form button").click()]);
+    assert.match(await offer.locator(".cart-discount").innerText(), /۵٪/);
+    await offer.locator(".cart-checkout").click();
+    await offer.fill("#billing_first_name", "مینا نمونه");
+    await offer.fill("#billing_phone", "09127778899");
+    await offer.locator("[data-step='0'] [data-next]").click();
+    await offer.selectOption("#billing_state", "FRS");
+    await offer.fill("#billing_city", "شیراز");
+    await offer.fill("#billing_address_1", "خیابان نمونه");
+    await offer.locator("[data-step='1'] [data-next]").click();
+    await offer.waitForSelector(".checkout-review:not([aria-busy])");
+    assert.match(await offer.locator(".checkout-total dd").innerText(), /۲,۲۸۰,۰۰۰/);
+    await offer.locator(".choice label", { hasText: "درگاه آزمایشی" }).click();
+    await Promise.all([offer.waitForURL(/order-received/), offer.locator(".step-submit").click()]);
+    assert.match(await offer.locator(".done-summary").innerText(), /۲,۲۸۰,۰۰۰/);
+    await offer.close();
+
+    // «می‌خوام با قیمت کامل خرید کنم» closes it for good.
+    const full = await (await browser.newContext()).newPage();
+    await full.goto(base);
+    await full.locator(".discount-popup").waitFor({ state: "visible", timeout: 6000 });
+    await full.locator("[data-discount-decline]").click();
+    assert.equal(await full.locator(".discount-popup").isVisible(), false);
+    await full.reload();
+    await full.waitForTimeout(4000);
+    assert.equal(await full.locator(".discount-popup").isVisible(), false, "Not shown again");
+    assert.match(await full.locator(".card-price").first().innerText(), /۲,۴۰۰,۰۰۰/);
+    await full.close();
+
+    // A mobile number that already bought cannot use it again.
+    const again = await (await browser.newContext()).newPage();
+    await again.goto(base);
+    await again.locator(".discount-popup").waitFor({ state: "visible", timeout: 6000 });
+    await Promise.all([again.waitForNavigation(), again.locator("[data-discount-apply]").click()]);
+    await again.goto(pants);
+    await Promise.all([again.waitForURL(/\/cart\//), again.locator(".add-form button").click()]);
+    await again.locator(".cart-checkout").click();
+    await again.fill("#billing_first_name", "مینا نمونه");
+    await again.fill("#billing_phone", "09127778899");
+    await again.locator("[data-step='0'] [data-next]").click();
+    await again.selectOption("#billing_state", "FRS");
+    await again.fill("#billing_city", "شیراز");
+    await again.fill("#billing_address_1", "خیابان نمونه");
+    await again.locator("[data-step='1'] [data-next]").click();
+    await again.waitForSelector(".checkout-review:not([aria-busy])");
+    await again.locator(".choice label", { hasText: "درگاه آزمایشی" }).click();
+    await Promise.all([again.waitForLoadState("load"), again.locator(".step-submit").click()]);
+    await again.waitForSelector(".shop-notices");
+    assert.match(await again.locator(".shop-notices").innerText(), /فقط برای اولین سفارش/);
+    assert.match(await again.locator(".checkout-summary").innerText(), /۱,۹۰۰,۰۰۰/, "Full price again");
+    await again.close();
   }
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);

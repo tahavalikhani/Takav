@@ -924,3 +924,22 @@ summary:focus-visible {
 .footer-links{flex-wrap:wrap}
 .enamad-seal{flex-basis:100%;display:flex;justify-content:flex-start}
 @media(max-width:600px){.info-page{padding-block:40px 80px}.contact-list div{grid-template-columns:1fr;gap:4px}}
+/* First-purchase discount popup */
+.discount-popup{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:20px;background:#000000b3;animation:discount-fade .3s ease}
+.discount-popup[hidden]{display:none}
+.discount-card{width:min(440px,100%);background:var(--bg);border:1px solid var(--orange);padding:34px 28px 26px;text-align:center;display:grid;gap:14px;animation:discount-rise .35s ease}
+.discount-kicker{font-size:11px;letter-spacing:3px;color:var(--orange)}
+.discount-card h2{font-size:clamp(24px,6vw,32px);line-height:1.5}.discount-card h2:focus{outline:none}
+.discount-text{color:var(--muted);font-size:14px}
+.discount-buttons{display:grid;gap:10px;margin-top:8px}
+.discount-apply{min-height:52px;border:1px solid var(--orange);background:var(--orange);color:#15110f;font-size:15px;cursor:pointer}.discount-apply:hover{background:#f7834d}
+.discount-decline{min-height:46px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:13px;cursor:pointer}.discount-decline:hover{color:var(--text);border-color:var(--text)}
+.discount-buttons button:disabled{opacity:.6;cursor:progress}
+.discount-status{min-height:20px;font-size:13px;color:var(--orange)}
+.cart-discount{color:var(--orange)!important}
+.product-price del,.card-price del{color:var(--muted)}.card-price del{margin-inline-end:6px;font-size:.9em}.card-price ins,.product-price ins{text-decoration:none}
+@keyframes discount-fade{from{opacity:0}}
+@keyframes discount-rise{from{opacity:0;transform:translateY(16px)}}
+@media(prefers-reduced-motion:reduce){.discount-popup,.discount-card{animation:none}}
+/* WordPress/WooCommerce screen-reader text (e.g. «قیمت اصلی…» beside a discounted price): read aloud, not shown. */
+.screen-reader-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

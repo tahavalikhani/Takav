@@ -334,6 +334,9 @@ function takav_checkout_review() {
     if (wc_tax_enabled() && !WC()->cart->display_prices_including_tax()) {
         echo '<div><dt>مالیات</dt><dd>' . wp_kses_post(wc_price(WC()->cart->get_taxes_total())) . '</dd></div>';
     }
+    if (takav_first_discount_active()) {
+        echo '<div><dt>تخفیف اولین خرید</dt><dd>' . esc_html(takav_fa_digits(takav_first_discount_active())) . '٪ (در قیمت‌ها حساب شده)</dd></div>';
+    }
     echo '<div class="checkout-total"><dt>مبلغ قابل پرداخت</dt><dd>' . wp_kses_post(WC()->cart->get_total()) . '</dd></div>';
     echo '</dl>';
     return ob_get_clean();
@@ -587,3 +590,95 @@ add_action('woocommerce_email_order_details', function ($order, $sent_to_admin) 
     $url = takav_telegram_url();
     if ($url) echo '<p><a href="' . esc_url($url) . '">دنبال کردن مراحل آماده‌سازی در تلگرام</a></p>';
 }, 5, 2);
+
+// ---------------------------------------------------------------------------
+// First-purchase discount: a popup offers N% (setting, default 5). «اعمال کن» stores the offer in the
+// visitor's WooCommerce session and every product price drops by N%, shown with the full price crossed out.
+// One per customer: a mobile number with an earlier paid order cannot use it again.
+// ---------------------------------------------------------------------------
+
+function takav_first_discount_enabled() {
+    return get_option('takav_first_discount_enabled', 'yes') === 'yes' && takav_first_discount_percent() > 0;
+}
+
+function takav_first_discount_percent() {
+    return max(0, min(90, (int) get_option('takav_first_discount_percent', 5)));
+}
+
+/** Percent applied for this visitor, or 0. */
+function takav_first_discount_active() {
+    if (!takav_shop_ready() || !takav_first_discount_enabled() || (is_admin() && !wp_doing_ajax())) return 0;
+    if (!WC()->session) return 0;
+    return WC()->session->get('takav_first_discount') ? takav_first_discount_percent() : 0;
+}
+
+function takav_discounted_price($price) {
+    $percent = takav_first_discount_active();
+    if (!$percent || $price === '' || $price === null) return $price;
+    return (string) round((float) $price * (100 - $percent) / 100, wc_get_price_decimals());
+}
+
+function takav_discounted_sale_price($sale, $product) {
+    if (!takav_first_discount_active()) return $sale;
+    return takav_discounted_price($sale !== '' ? $sale : $product->get_regular_price('edit'));
+}
+
+foreach (array('woocommerce_product_get_price', 'woocommerce_product_variation_get_price', 'woocommerce_variation_prices_price') as $hook) {
+    add_filter($hook, 'takav_discounted_price', 20);
+}
+foreach (array('woocommerce_product_get_sale_price', 'woocommerce_product_variation_get_sale_price', 'woocommerce_variation_prices_sale_price') as $hook) {
+    add_filter($hook, 'takav_discounted_sale_price', 20, 2);
+}
+// Variable products cache their price range; keep discounted and full ranges apart.
+add_filter('woocommerce_get_variation_prices_hash', function ($hash) {
+    $hash[] = 'takav-first-discount-' . takav_first_discount_active();
+    return $hash;
+});
+
+// «اعمال کن» in the popup.
+add_action('wc_ajax_takav_first_discount', function () {
+    if (!takav_first_discount_enabled()) wp_send_json_error(null, 400);
+    if (!WC()->session->has_session()) WC()->session->set_customer_session_cookie(true);
+    WC()->session->set('takav_first_discount', 1);
+    wp_send_json_success(array('percent' => takav_first_discount_percent()));
+});
+
+function takav_has_paid_order($phone) {
+    $phone = takav_normalize_phone($phone);
+    if (!preg_match('/^09\d{9}$/', $phone)) return false;
+    return (bool) wc_get_orders(array('billing_phone' => $phone, 'status' => array('wc-processing', 'wc-completed'), 'limit' => 1, 'return' => 'ids', 'type' => 'shop_order'));
+}
+
+// One discount per customer: refuse it for a mobile number that has already bought, and show full prices again.
+add_action('woocommerce_after_checkout_validation', function ($data, $errors) {
+    if (!takav_first_discount_active() || empty($data['billing_phone']) || !takav_has_paid_order($data['billing_phone'])) return;
+    WC()->session->set('takav_first_discount', null);
+    $errors->add('takav_first_discount', 'تخفیف اولین خرید فقط برای اولین سفارش است و قبلاً با این شماره خرید کرده‌ای. قیمت‌ها به قیمت کامل برگشت؛ دوباره «ثبت سفارش» را بزن.', array('id' => 'billing_phone'));
+}, 20, 2);
+
+add_action('woocommerce_checkout_create_order', function ($order) {
+    $percent = takav_first_discount_active();
+    if ($percent) $order->update_meta_data('_takav_first_discount', $percent);
+});
+
+// After a paid order the offer is used up.
+add_action('woocommerce_thankyou', function ($order_id) {
+    $order = wc_get_order($order_id);
+    if ($order && $order->is_paid() && WC()->session) WC()->session->set('takav_first_discount', null);
+}, 1);
+
+/** The popup, rendered hidden; the theme script shows it after a few seconds on a first visit. */
+add_action('wp_footer', function () {
+    if (!takav_shop_ready() || !takav_first_discount_enabled() || takav_first_discount_active()) return;
+    if (is_checkout() || is_cart() || get_query_var('takav_view', '') === 'track') return;
+    // Only offer it once something can actually be bought.
+    $for_sale = array_filter(array_keys(takav_catalog()), function ($id) { return takav_can_buy(takav_wc_product($id)); });
+    if (!$for_sale) return;
+    $percent = takav_fa_digits(takav_first_discount_percent());
+    echo '<div class="discount-popup" role="dialog" aria-modal="true" aria-labelledby="discount-title" hidden data-discount-url="' . esc_url(WC_AJAX::get_endpoint('takav_first_discount')) . '">';
+    echo '<div class="discount-card"><p class="discount-kicker"><bdi>TAKAV</bdi></p>';
+    echo '<h2 id="discount-title" tabindex="-1">تخفیف ' . esc_html($percent) . '٪ برای اولین خرید</h2>';
+    echo '<p class="discount-text">روی همهٔ محصولات، فقط برای اولین سفارشت.</p>';
+    echo '<div class="discount-buttons"><button type="button" class="discount-apply" data-discount-apply>اعمال کن</button><button type="button" class="discount-decline" data-discount-decline>می‌خوام با قیمت کامل خرید کنم</button></div>';
+    echo '<p class="discount-status" role="status" aria-live="polite"></p></div></div>';
+}, 5);
