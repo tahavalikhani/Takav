@@ -143,6 +143,8 @@ add_action('admin_init', function () {
 add_filter('template_include', function ($template) {
     if (!takav_shop_ready()) return $template;
     if (is_wc_endpoint_url('order-received')) return get_template_directory() . '/order-received.php';
+    // The step before the bank (no pay_for_order): see order-pay.php. WooCommerce's "pay again" form stays as is.
+    if (is_wc_endpoint_url('order-pay') && !isset($_GET['pay_for_order'])) return get_template_directory() . '/order-pay.php'; // phpcs:ignore WordPress.Security.NonceVerification
     if (takav_is_checkout_form()) return get_template_directory() . '/checkout.php';
     if (is_cart()) return get_template_directory() . '/page-cart.php';
     return $template;
@@ -181,6 +183,7 @@ add_filter('woocommerce_enqueue_styles', function ($styles) {
 add_filter('document_title_parts', function ($parts) {
     if (!takav_shop_ready()) return $parts;
     if (is_wc_endpoint_url('order-received')) $parts = array('title' => 'سفارش ثبت شد — تکاو');
+    elseif (is_wc_endpoint_url('order-pay')) $parts = array('title' => 'پرداخت سفارش — تکاو');
     elseif (takav_is_checkout_form()) $parts = array('title' => 'تکمیل سفارش — تکاو');
     elseif (is_cart()) $parts = array('title' => 'سبد خرید — تکاو');
     return $parts;
@@ -410,12 +413,12 @@ function takav_find_order($number, $phone) {
     return takav_normalize_phone($order->get_billing_phone()) === $phone ? $order : null;
 }
 
-/** Limits guesses on the tracking form: 15 lookups per 10 minutes per visitor address. */
+/** Limits guesses on the tracking form: 30 lookups per 10 minutes per visitor address (the open page refreshes itself once a minute). */
 function takav_track_allowed() {
     $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '';
     $key = 'takav_track_' . md5($ip);
     $count = (int) get_transient($key);
-    if ($count >= 15) return false;
+    if ($count >= 30) return false;
     set_transient($key, $count + 1, 10 * MINUTE_IN_SECONDS);
     return true;
 }
@@ -446,7 +449,10 @@ function takav_purchase_form($id) {
         echo '<p>' . ($sold_out ? 'این محصول فعلاً موجود نیست.' : 'فروش این محصول به‌زودی شروع می‌شود.') . '</p></div>';
         return;
     }
-    echo '<p class="product-price">' . wp_kses_post($product->get_price_html()) . '</p>';
+    if (takav_first_discount_active()) {
+        echo '<p class="discount-badge">تخفیف ' . esc_html(takav_fa_digits(takav_first_discount_active())) . '٪ اولین خرید روی این محصول اعمال شد</p>';
+    }
+    echo '<p class="product-price' . (takav_first_discount_active() ? ' is-discounted' : '') . '">' . wp_kses_post($product->get_price_html()) . '</p>';
     takav_notices();
     echo '<form class="add-form" method="post" action="' . esc_url(takav_product_url($id)) . '">';
     if ($product->is_type('variable')) {

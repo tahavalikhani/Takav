@@ -27,6 +27,11 @@
       "data": "<?php\n/** Test only: a bank that approves every payment, standing in for ZarinPal, which can't be reached from the test machine. */\nadd_filter('woocommerce_payment_gateways', function ($gateways) {\n    if (!class_exists('Takav_Test_Bank')) {\n        class Takav_Test_Bank extends WC_Payment_Gateway {\n            public function __construct() {\n                $this->id = 'takav_test_bank';\n                $this->method_title = $this->title = 'درگاه آزمایشی';\n                $this->description = 'فقط برای آزمایش.';\n                $this->enabled = 'yes';\n            }\n            public function process_payment($order_id) {\n                $order = wc_get_order($order_id);\n                $order->payment_complete('TEST-' . $order_id);\n                WC()->cart->empty_cart();\n                return array('result' => 'success', 'redirect' => $this->get_return_url($order));\n            }\n        }\n    }\n    $gateways[] = 'Takav_Test_Bank';\n    return $gateways;\n});\n"
     },
     {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/takav-test-zarinpal.php",
+      "data": "<?php\n/**\n * Test only: stands in for ZarinPal's API, which can't be reached from the test machine.\n * Refuses like an inactive merchant code, unless the browser carries the takav_zp_ok cookie.\n */\nadd_filter('pre_http_request', function ($pre, $args, $url) {\n    if (strpos($url, 'zarinpal.com') === false) return $pre;\n    $ok = !empty($_COOKIE['takav_zp_ok']);\n    $body = $ok\n        ? array('data' => array('code' => 100, 'authority' => 'A000000000000000000000000000TAKAVTEST'), 'errors' => array())\n        : array('data' => array(), 'errors' => array('code' => -9, 'message' => 'مرچنت کد فعال نیست.'));\n    return array('headers' => array(), 'body' => wp_json_encode($body), 'response' => array('code' => $ok ? 200 : 422, 'message' => ''), 'cookies' => array(), 'filename' => null);\n}, 10, 3);\n"
+    },
+    {
       "step": "activateTheme",
       "themeFolderName": "takav"
     },

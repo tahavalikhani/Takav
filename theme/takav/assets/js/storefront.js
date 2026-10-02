@@ -276,3 +276,47 @@
     }
   });
 })();
+
+// Tracking page: while the result is open, re-check the order once a minute so status changes show up live.
+(() => {
+  "use strict";
+  const form = document.querySelector(".track-form");
+  if (!form || !document.querySelector(".track-result[data-live]")) return;
+  async function refresh() {
+    if (document.hidden) return;
+    const current = document.querySelector(".track-result[data-live]");
+    if (!current) return;
+    try {
+      const response = await fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin" });
+      const html = new DOMParser().parseFromString(await response.text(), "text/html");
+      const fresh = html.querySelector(".track-result[data-live]");
+      if (fresh) current.replaceWith(fresh);
+    } catch (_) {
+      // Keep the last known status; the next minute tries again.
+    }
+  }
+  setInterval(refresh, 60000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refresh();
+  });
+})();
+
+// Phone menu (a <details>): close it on a link tap, Escape or a tap outside.
+(() => {
+  "use strict";
+  const menu = document.querySelector(".mobile-menu");
+  if (!menu) return;
+  const close = () => menu.removeAttribute("open");
+  menu.addEventListener("click", (event) => {
+    if (event.target.closest(".mobile-menu-panel a")) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && menu.open) {
+      close();
+      menu.querySelector("summary").focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (menu.open && !menu.contains(event.target)) close();
+  });
+})();

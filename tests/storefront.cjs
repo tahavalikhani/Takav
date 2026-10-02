@@ -39,6 +39,7 @@ const output =
     0,
   );
   assert.equal(await page.locator("h1").count(), 1);
+  assert.equal(await page.locator(".mobile-menu").isVisible(), false, "Desktop keeps its own navigation");
   const hoodie = await page
     .locator(".product-link")
     .first()
@@ -145,11 +146,12 @@ const output =
   assert.match(trackingCode, /^\d+$/);
   assert.equal(await page.locator("h1").innerText(), "سفارشت ثبت شد");
   assert.equal(await page.locator("[data-cart-count]").innerText(), "۰");
-  assert.equal(await page.locator(".done-telegram").getAttribute("href"), "https://t.me/takav_test");
+  assert.equal(await page.locator('.done-action[href="https://t.me/takav_test"]').count(), 1);
+  assert.equal(await page.locator('.done-action[href="https://www.instagram.com/takavbrand"]').count(), 1);
   assert.match(await page.locator(".done-card").innerText(), /TEST-\d+/);
   await page.waitForTimeout(1300);
   await page.screenshot({ path: path.join(output, "order-5-done.png"), fullPage: true });
-  await page.locator(".done-card .done-primary").click();
+  await page.locator(".done-action.is-primary").click();
   assert.equal(await page.inputValue("#track-order"), trackingCode);
   await page.fill("#track-phone", "09120000000");
   await page.locator(".track-form button").click();
@@ -158,6 +160,8 @@ const output =
   await page.locator(".track-form button").click();
   assert.match(await page.locator(".track-result h2").innerText(), new RegExp(trackingCode));
   assert.match(await page.locator(".track-status").innerText(), /.+/);
+  assert.match(await page.locator(".track-howto").innerText(), /چطور کار می‌کند[\s\S]*کد پیگیری[\s\S]*شماره موبایل/);
+  assert.match(await page.locator(".track-live").innerText(), /به‌روزرسانی خودکار/);
   await page.screenshot({ path: path.join(output, "order-6-track.png"), fullPage: true });
   for (const url of [base, hoodie, pants, `${base}/collection-one/`, `${base}/cart/`, `${base}/about/`, `${base}/contact/`, `${base}/terms/`]) {
     await page.goto(url, { waitUntil: "networkidle" });
@@ -245,6 +249,39 @@ const output =
     assert.equal((await page.goto(`${base}/?p=1`)).status(), 200);
   }
   if (!process.env.TAKAV_STATIC) {
+    // ZarinPal: a refusal (e.g. inactive merchant code) gets a clear page with next steps; an accepted
+    // request goes straight to the bank.
+    const zpContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await zpContext.addInitScript(() => {
+      try {
+        localStorage.setItem("takav-first-discount", "declined");
+      } catch (_) {}
+    });
+    const zp = await zpContext.newPage();
+    await zp.goto(pants);
+    await Promise.all([zp.waitForURL(/\/cart\//), zp.locator(".add-form button").click()]);
+    await zp.locator(".cart-checkout").click();
+    await zp.fill("#billing_first_name", "زهرا نمونه");
+    await zp.fill("#billing_phone", "09351112233");
+    await zp.locator("[data-step='0'] [data-next]").click();
+    await zp.selectOption("#billing_state", "THR");
+    await zp.fill("#billing_city", "تهران");
+    await zp.fill("#billing_address_1", "خیابان نمونه");
+    await zp.locator("[data-step='1'] [data-next]").click();
+    await zp.waitForSelector(".checkout-review:not([aria-busy])");
+    await zp.locator(".choice label", { hasText: "زرین‌پال" }).click();
+    await Promise.all([zp.waitForURL(/order-pay/), zp.locator(".step-submit").click()]);
+    assert.equal(await zp.locator("h1").innerText(), "اتصال به درگاه پرداخت انجام نشد");
+    assert.match(await zp.locator(".shop-notices").innerText(), /مرچنت کد فعال نیست/);
+    assert.equal(await zp.locator(".done-action").count(), 3);
+    await zp.screenshot({ path: path.join(output, "zarinpal-refused.png"), fullPage: true });
+    await zpContext.addCookies([{ name: "takav_zp_ok", value: "1", url: base }]);
+    // Check the redirect itself; the real bank page can't be opened from the test machine.
+    const retry = await zp.request.get(await zp.locator(".done-action.is-primary").getAttribute("href"), { maxRedirects: 0 });
+    assert.equal(retry.status(), 302);
+    assert.match(retry.headers().location, /^https:\/\/sandbox\.zarinpal\.com\/pg\/StartPay\/A0+TAKAVTEST$/);
+    await zpContext.close();
+
     // First-purchase popup: shows after a few seconds, «اعمال کن» takes 5% off every product.
     const offer = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
     offer.on("pageerror", (error) => errors.push(error.message));
@@ -262,6 +299,18 @@ const output =
     assert.equal(await offer.locator(".discount-popup").count(), 0, "Gone once applied");
     assert.match(await offer.locator(".card-price").first().innerText(), /۲,۲۸۰,۰۰۰/);
     assert.match(await offer.locator(".card-price del").first().innerText(), /۲,۴۰۰,۰۰۰/);
+    // Discounted card prices must fit narrow phones (they used to overlap and push the page sideways).
+    for (const width of [320, 360, 390]) {
+      await offer.setViewportSize({ width, height: 844 });
+      assert.ok(await offer.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Discounted prices overflow at ${width}px`);
+    }
+    // Phone menu: one button opens every link.
+    assert.equal(await offer.locator(".main-nav").isVisible(), false);
+    await offer.locator(".mobile-menu summary").click();
+    assert.equal(await offer.locator(".mobile-menu-panel a").count() >= 8, true);
+    await Promise.all([offer.waitForURL(/\/track\//), offer.locator(".mobile-menu-panel a", { hasText: "پیگیری سفارش" }).click()]);
+    assert.equal(await offer.locator(".mobile-menu").getAttribute("open"), null);
+    await offer.goto(base);
     await offer.goto(hoodie);
     await Promise.all([offer.waitForURL(/\/cart\//), offer.locator(".add-form button").click()]);
     assert.match(await offer.locator(".cart-discount").innerText(), /۵٪/);

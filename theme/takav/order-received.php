@@ -40,10 +40,14 @@ get_header(); ?>
         <?php if ($order->has_status(array('on-hold', 'pending'))) : ?><p class="done-status">وضعیت: <?php echo esc_html(takav_status_label($order)); ?></p><?php endif; ?>
         <?php if ($order->get_transaction_id()) : ?><p class="done-status">کد رهگیری پرداخت: <bdi><?php echo esc_html($order->get_transaction_id()); ?></bdi></p><?php endif; ?>
         <p class="done-preorder">پیش‌فروش: سفارشت حدود <?php echo esc_html(takav_fa_digits(takav_preorder_days())); ?> روز دیگر آماده می‌شود و با تیپاکس (پس‌کرایه) ارسال می‌شود.</p>
-        <?php takav_telegram_button('done-telegram'); ?>
         <div class="done-gateway"><?php do_action('woocommerce_thankyou_' . $order->get_payment_method(), $order->get_id()); do_action('woocommerce_thankyou', $order->get_id()); ?></div>
-        <a class="done-primary" href="<?php echo esc_url(add_query_arg('order', $order->get_order_number(), takav_view_url('track'))); ?>">پیگیری سفارش</a>
-        <a class="done-secondary" href="<?php echo esc_url(home_url('/')); ?>">بازگشت به فروشگاه</a>
+        <?php $contact = takav_contact(); ?>
+        <nav class="done-actions" aria-label="قدم بعدی">
+            <a class="done-action is-primary" href="<?php echo esc_url(add_query_arg('order', $order->get_order_number(), takav_view_url('track'))); ?>"><span class="done-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><span><strong>پیگیری سفارش</strong><small>وضعیت سفارشت را لحظه‌به‌لحظه ببین</small></span></a>
+            <?php if ($contact['instagram']) : ?><a class="done-action" href="<?php echo esc_url($contact['instagram']); ?>" target="_blank" rel="noopener"><span class="done-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg></span><span><strong>اینستاگرام تکاو</strong><small>کالکشن و خبرهای تازه</small></span></a><?php endif; ?>
+            <?php if (takav_telegram_url()) : ?><a class="done-action" href="<?php echo esc_url(takav_telegram_url()); ?>" target="_blank" rel="noopener"><span class="done-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21 4-18 7 6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg></span><span><strong>تلگرام تکاو</strong><small>مراحل آماده‌سازی سفارش</small></span></a>
+            <?php else : ?><a class="done-action" href="<?php echo esc_url(home_url('/')); ?>"><span class="done-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10 12 3l9 7v10H3z"/></svg></span><span><strong>بازگشت به فروشگاه</strong><small>دیدن کالکشن تکاو</small></span></a><?php endif; ?>
+        </nav>
     </div>
     <section class="done-summary" aria-labelledby="done-summary-title">
         <h2 id="done-summary-title">خلاصهٔ سفارش</h2>

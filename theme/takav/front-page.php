@@ -14,6 +14,7 @@
                 <div class="product-image-wrap">
                     <?php takav_product_image($product, 'product-image', true); ?>
                     <img class="product-hover-image" src="<?php echo esc_url(takav_asset('images/' . $detail_image . '-640.webp')); ?>" alt="" width="640" height="640" loading="lazy" aria-hidden="true">
+                    <?php if ($on_sale && takav_first_discount_active()) : ?><span class="product-status is-discount"><?php echo esc_html(takav_fa_digits(takav_first_discount_active())); ?>٪ تخفیف</span><?php endif; ?>
                     <?php if (!$on_sale) : ?><span class="product-status"><?php echo $wc_product && $wc_product->is_purchasable() ? 'ناموجود' : 'به‌زودی'; ?></span><?php endif; ?>
                 </div>
                 <div class="product-info">

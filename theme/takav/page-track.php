@@ -20,7 +20,16 @@ if (isset($_POST['takav_track'])) {
 $steps = array('ثبت سفارش', 'آماده‌سازی (حدود ' . takav_fa_digits(takav_preorder_days()) . ' روز)', 'ارسال با تیپاکس');
 get_header(); ?>
 <main id="main" class="track-page wrap">
-    <div class="cart-heading"><p><bdi>TAKAV / TRACK</bdi></p><h1>پیگیری سفارش</h1><span>کد پیگیری را از صفحهٔ پایان خرید یا پیامک و ایمیل سفارش بردار.</span></div>
+    <div class="cart-heading"><p><bdi>TAKAV / TRACK</bdi></p><h1>پیگیری سفارش</h1><span>وضعیت سفارشت را بدون عضویت، با کد پیگیری و شماره موبایل ببین.</span></div>
+    <section class="track-howto" aria-labelledby="track-howto-title">
+        <h2 id="track-howto-title">چطور کار می‌کند؟</h2>
+        <ol>
+            <li><strong>کد پیگیری</strong> را وارد کن؛ همان عددی که بعد از پرداخت در صفحهٔ «سفارشت ثبت شد» دیدی (در ایمیل سفارش هم هست).</li>
+            <li><strong>شماره موبایلی</strong> را که با آن سفارش دادی وارد کن و «نمایش وضعیت» را بزن.</li>
+            <li>مرحلهٔ سفارشت را می‌بینی: <strong>ثبت سفارش</strong> ← <strong>آماده‌سازی</strong> (حدود <?php echo esc_html(takav_fa_digits(takav_preorder_days())); ?> روز) ← <strong>ارسال با تیپاکس</strong>. هر تغییری در سفارشت همین‌جا نشان داده می‌شود و تا وقتی این صفحه باز است، هر دقیقه خودش به‌روز می‌شود.</li>
+        </ol>
+        <?php if (takav_telegram_url()) : ?><p>جزئیات مراحل آماده‌سازی را در <a href="<?php echo esc_url(takav_telegram_url()); ?>" target="_blank" rel="noopener">تلگرام تکاو</a> هم می‌گذاریم.</p><?php endif; ?>
+    </section>
     <form class="track-form" method="post" action="<?php echo esc_url(takav_view_url('track')); ?>">
         <input type="hidden" name="takav_track" value="1">
         <p class="field"><label for="track-order">کد پیگیری</label><input id="track-order" name="order" type="text" inputmode="numeric" dir="ltr" required value="<?php echo esc_attr($number); ?>" data-digits></p>
@@ -29,7 +38,8 @@ get_header(); ?>
     </form>
     <?php if ($error) : ?><ul class="shop-notices" role="alert"><li class="shop-notice is-error"><?php echo esc_html($error); ?></li></ul><?php endif; ?>
     <?php if ($order) : $progress = takav_order_progress($order); ?>
-    <section class="track-result" aria-labelledby="track-title" tabindex="-1">
+    <section class="track-result" aria-labelledby="track-title" tabindex="-1" data-live>
+        <p class="track-live" aria-live="polite"><span class="track-live-dot" aria-hidden="true"></span>به‌روزرسانی خودکار هر دقیقه · آخرین بررسی: <time data-live-time><?php echo esc_html(takav_fa_digits(wp_date('H:i'))); ?></time></p>
         <div class="track-head">
             <h2 id="track-title">سفارش <bdi><?php echo esc_html($order->get_order_number()); ?></bdi></h2>
             <span class="track-status"><?php echo esc_html(takav_status_label($order)); ?></span>
